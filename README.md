@@ -72,6 +72,20 @@ supabase db push
 - A partial unique index enforces one active timer per user at the database
   level.
 
+## Task API
+
+Task CRUD is exposed through REST-style Next.js Route Handlers:
+
+- `GET /api/tasks`
+- `POST /api/tasks`
+- `GET /api/tasks/[id]`
+- `PATCH /api/tasks/[id]`
+- `DELETE /api/tasks/[id]`
+
+All task routes require a Supabase Auth session, derive `user_id` from the
+authenticated user, validate request bodies with Zod, and filter reads,
+updates, and deletes by the authenticated user.
+
 ## Deployment
 
 Deployment target: Vercel.
@@ -80,16 +94,17 @@ Live demo link: pending.
 
 ## Current Milestone Status
 
-Milestone 1 database foundation is implemented in source:
+Milestone 2 task CRUD is implemented in source:
 
 - Fresh Next.js App Router auth foundation from Milestone 0
 - Initial SQL migration for `tasks` and `time_logs`
 - Supabase Row Level Security policies for user-owned data
 - TypeScript database helper types
+- REST task CRUD route handlers
+- Protected dashboard task UI
 
 Intentionally not implemented yet:
 
-- Task CRUD
 - Time logs
 - Timer start/stop behavior
 - Daily productivity summary

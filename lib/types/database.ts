@@ -23,7 +23,10 @@ export type TaskInsert = {
 };
 
 export type TaskUpdate = Partial<
-  Pick<Task, "title" | "description" | "original_input" | "status">
+  Pick<
+    Task,
+    "title" | "description" | "original_input" | "status" | "updated_at"
+  >
 >;
 
 export type TimeLog = {

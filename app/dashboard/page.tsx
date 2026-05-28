@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { logout } from "@/app/actions/auth";
+import { TaskManager } from "@/components/tasks/task-manager";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -14,14 +15,6 @@ export default async function DashboardPage() {
   if (error || !user) {
     redirect("/login");
   }
-
-  const joinedAt = user.created_at
-    ? new Intl.DateTimeFormat("en", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }).format(new Date(user.created_at))
-    : "Unknown";
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-5xl px-6 py-8">
@@ -44,33 +37,7 @@ export default async function DashboardPage() {
         </form>
       </nav>
 
-      <section className="py-10">
-        <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-slate-950">
-            Welcome to your workspace
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-            You are signed in as {user.email}. This page is protected on the
-            server and only renders when Supabase Auth returns a valid user
-            session.
-          </p>
-
-          <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-md border border-slate-200 p-4">
-              <dt className="text-sm font-medium text-slate-500">User ID</dt>
-              <dd className="mt-2 break-all text-sm font-semibold text-slate-900">
-                {user.id}
-              </dd>
-            </div>
-            <div className="rounded-md border border-slate-200 p-4">
-              <dt className="text-sm font-medium text-slate-500">Joined</dt>
-              <dd className="mt-2 text-sm font-semibold text-slate-900">
-                {joinedAt}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </section>
+      <TaskManager userEmail={user.email ?? null} />
     </main>
   );
 }
