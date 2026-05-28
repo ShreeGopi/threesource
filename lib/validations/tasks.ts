@@ -24,8 +24,9 @@ export const CreateTaskSchema = z
   .object({
     original_input: z
       .string()
+      .trim()
       .max(500)
-      .refine((value) => value.trim().length > 0, {
+      .refine((value) => value.length > 0, {
         message: "Task input is required.",
       }),
     title: optionalTextSchema(160),

@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    redirect("/login");
+    redirect("/login?message=Please%20log%20in%20to%20continue.");
   }
 
   return (

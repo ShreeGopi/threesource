@@ -39,6 +39,12 @@ export type TimeLog = {
   created_at: string;
 };
 
+export type TimeLogWithTask = TimeLog & {
+  tasks: {
+    title: string;
+  } | null;
+};
+
 export type TimeLogInsert = {
   id?: string;
   user_id: string;

@@ -86,6 +86,23 @@ All task routes require a Supabase Auth session, derive `user_id` from the
 authenticated user, validate request bodies with Zod, and filter reads,
 updates, and deletes by the authenticated user.
 
+## Timer API
+
+Time tracking is exposed through REST-style Next.js Route Handlers:
+
+- `POST /api/tasks/[id]/start`
+- `POST /api/tasks/[id]/stop`
+- `GET /api/time-logs`
+- `GET /api/tasks/[id]/time-logs`
+
+Timer sessions are stored in the `time_logs` table. Each row belongs to the
+authenticated user and links to a task through `task_id`. The database enforces
+one active timer per user with a partial unique index where `ended_at is null`.
+
+The dashboard shows live elapsed time from the stored `started_at`, total
+completed time per task, and a simple all-time-logs view. Daily productivity
+summary is still planned for Milestone 4.
+
 ## Deployment
 
 Deployment target: Vercel.
@@ -94,7 +111,7 @@ Live demo link: pending.
 
 ## Current Milestone Status
 
-Milestone 2 task CRUD is implemented in source:
+Milestone 3 timer tracking is implemented in source:
 
 - Fresh Next.js App Router auth foundation from Milestone 0
 - Initial SQL migration for `tasks` and `time_logs`
@@ -102,11 +119,15 @@ Milestone 2 task CRUD is implemented in source:
 - TypeScript database helper types
 - REST task CRUD route handlers
 - Protected dashboard task UI
+- REST timer start/stop route handlers
+- Time log list route handlers
+- Live elapsed timer display
+- Total completed time per task
 
 Intentionally not implemented yet:
 
-- Time logs
-- Timer start/stop behavior
 - Daily productivity summary
+- Weekly summary
 - AI task generation
 - Productivity charts
+- Reminders
