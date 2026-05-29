@@ -98,10 +98,28 @@ Time tracking is exposed through REST-style Next.js Route Handlers:
 Timer sessions are stored in the `time_logs` table. Each row belongs to the
 authenticated user and links to a task through `task_id`. The database enforces
 one active timer per user with a partial unique index where `ended_at is null`.
+Starting a timer on a pending task automatically moves it to `in_progress`;
+stopping a timer does not automatically mark the task completed.
 
 The dashboard shows live elapsed time from the stored `started_at`, total
-completed time per task, and a simple all-time-logs view. Daily productivity
-summary is still planned for Milestone 4.
+completed time per task, and a simple all-time-logs view.
+
+## Daily Summary
+
+Daily summary is available through:
+
+- `GET /api/summary/today`
+- `/summary`
+
+The API requires a Supabase Auth session and uses the authenticated user for all
+queries. It accepts an optional `timezone_offset_minutes` query parameter that
+matches JavaScript `new Date().getTimezoneOffset()`, so the summary can use the
+user's local-day boundaries.
+
+The summary includes total tracked time today, tasks worked on today, completed
+tasks, pending tasks, in-progress tasks, and active timer information. Since the
+current schema does not include `completed_at`, completed-today is inferred from
+`status = completed` and `updated_at` within the local-day range.
 
 ## Deployment
 
@@ -111,7 +129,7 @@ Live demo link: pending.
 
 ## Current Milestone Status
 
-Milestone 3 timer tracking is implemented in source:
+Milestone 4 daily summary is implemented in source:
 
 - Fresh Next.js App Router auth foundation from Milestone 0
 - Initial SQL migration for `tasks` and `time_logs`
@@ -123,10 +141,11 @@ Milestone 3 timer tracking is implemented in source:
 - Time log list route handlers
 - Live elapsed timer display
 - Total completed time per task
+- Daily summary API
+- Protected summary page
 
 Intentionally not implemented yet:
 
-- Daily productivity summary
 - Weekly summary
 - AI task generation
 - Productivity charts
