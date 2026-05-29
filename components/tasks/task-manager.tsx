@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -50,6 +51,16 @@ type ApiErrorResponse = {
   }>;
 };
 
+class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+  }
+}
+
 type EditForm = {
   title: string;
   description: string;
@@ -69,7 +80,12 @@ async function readApiResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const errorPayload = payload as ApiErrorResponse | null;
     const detailMessage = errorPayload?.details?.[0]?.message;
-    throw new Error(detailMessage ?? errorPayload?.error ?? "Request failed.");
+    throw new ApiRequestError(
+      detailMessage ??
+        errorPayload?.error ??
+        `Request failed with status ${response.status}.`,
+      response.status,
+    );
   }
 
   return payload as T;
@@ -107,6 +123,8 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
   const [timerTaskId, setTimerTaskId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const deletingTaskIdsRef = useRef(new Set<string>());
   const [createForm, setCreateForm] = useState({
     originalInput: "",
     title: "",
@@ -193,6 +211,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
   async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setNotice(null);
     setIsCreating(true);
 
     try {
@@ -233,6 +252,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
 
   async function updateTask(taskId: string, updates: TaskUpdatePayload) {
     setError(null);
+    setNotice(null);
     setUpdatingId(taskId);
 
     try {
@@ -287,11 +307,17 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
   }
 
   async function handleDeleteTask(task: Task) {
+    if (deletingTaskIdsRef.current.has(task.id)) {
+      return;
+    }
+
     if (!window.confirm(`Delete "${task.title}"?`)) {
       return;
     }
 
     setError(null);
+    setNotice(null);
+    deletingTaskIdsRef.current.add(task.id);
     setDeletingId(task.id);
 
     try {
@@ -313,18 +339,35 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
         setEditingId(null);
       }
     } catch (caughtError) {
+      if (
+        caughtError instanceof ApiRequestError &&
+        caughtError.status === 404
+      ) {
+        setTasks((currentTasks) =>
+          currentTasks.filter((currentTask) => currentTask.id !== task.id),
+        );
+        setTimeLogs((currentLogs) =>
+          currentLogs.filter((log) => log.task_id !== task.id),
+        );
+        setNotice("That task was already deleted. The dashboard was refreshed.");
+        void loadDashboardData();
+        return;
+      }
+
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to delete task.",
+          : "Unable to delete task. Please refresh and try again.",
       );
     } finally {
+      deletingTaskIdsRef.current.delete(task.id);
       setDeletingId(null);
     }
   }
 
   async function handleStartTimer(task: Task) {
     setError(null);
+    setNotice(null);
     setTimerTaskId(task.id);
 
     try {
@@ -359,6 +402,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
 
   async function handleStopTimer(task: Task) {
     setError(null);
+    setNotice(null);
     setTimerTaskId(task.id);
 
     try {
@@ -492,6 +536,12 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
       {error ? (
         <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
+        </p>
+      ) : null}
+
+      {notice ? (
+        <p className="rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
+          {notice}
         </p>
       ) : null}
 

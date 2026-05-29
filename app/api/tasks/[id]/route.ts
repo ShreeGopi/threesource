@@ -112,20 +112,31 @@ export async function DELETE(_request: NextRequest, context: TaskRouteContext) {
     return notFoundResponse();
   }
 
-  const { data, error } = await supabase
+  const { data: existingTask, error: lookupError } = await supabase
+    .from("tasks")
+    .select("id")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (lookupError) {
+    return apiError(500, "Unable to verify task ownership.");
+  }
+
+  if (!existingTask) {
+    return notFoundResponse();
+  }
+
+  const { error } = await supabase
     .from("tasks")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id)
-    .select("id")
-    .maybeSingle();
+    .eq("user_id", user.id);
 
   if (error) {
-    return apiError(500, "Unable to delete task.");
-  }
-
-  if (!data) {
-    return notFoundResponse();
+    return apiError(500, "Unable to delete task.", {
+      message: error.message,
+    });
   }
 
   return new Response(null, { status: 204 });

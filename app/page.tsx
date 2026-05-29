@@ -32,9 +32,20 @@ export default function HomePage() {
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
           ThreeSource helps users manage tasks, record real working sessions,
-          and understand daily progress. This foundation currently includes
-          secure authentication and a protected dashboard shell.
+          and understand daily progress with a protected dashboard, stored time
+          logs, and a daily productivity summary.
         </p>
+        <div className="mt-8 grid max-w-3xl gap-3 text-sm text-slate-700 sm:grid-cols-3">
+          <div className="border-l-2 border-teal-700 pl-3">
+            Secure Supabase Auth
+          </div>
+          <div className="border-l-2 border-teal-700 pl-3">
+            Task CRUD and timers
+          </div>
+          <div className="border-l-2 border-teal-700 pl-3">
+            Daily summary view
+          </div>
+        </div>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link
             href="/signup"

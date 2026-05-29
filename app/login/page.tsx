@@ -22,7 +22,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-bold text-slate-950">Log in</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Access your protected ThreeSource workspace.
+          Access your protected task and time tracking workspace.
         </p>
 
         {params.message ? (

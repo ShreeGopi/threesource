@@ -3,7 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "ThreeSource",
-  description: "Task management and time tracking for focused daily work.",
+  description:
+    "A full-stack task and time tracking app with daily productivity summaries.",
 };
 
 export default function RootLayout({

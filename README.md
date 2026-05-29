@@ -1,6 +1,10 @@
-# ThreeSource
+# ThreeSource — Task and Time Tracking App
 
-ThreeSource is a full-stack task and time tracking app for managing focused work, recording real-time sessions, and reviewing daily productivity.
+ThreeSource is a full-stack task and time tracking app built for the assignment brief. Users can sign up, manage their own tasks, start and stop real-time timers, review stored time log sessions, and see a current-day productivity summary.
+
+## Live Demo
+
+Live Demo: Pending deployment
 
 ## Tech Stack
 
@@ -11,7 +15,81 @@ ThreeSource is a full-stack task and time tracking app for managing focused work
 - Supabase Row Level Security
 - Zod
 - Tailwind CSS
-- Vercel deployment
+- Vercel
+
+## Core Features
+
+- Sign up, login, and logout
+- Protected dashboard and summary routes
+- User-owned task CRUD
+- Natural language task input with optional title and description override
+- Task statuses: `pending`, `in_progress`, `completed`
+- Start/stop timer per task
+- One active timer per user
+- Stored time log sessions
+- Total tracked time per task
+- Daily productivity summary
+- Protected REST APIs
+- RLS-backed data isolation
+
+## API Overview
+
+All API routes require an authenticated Supabase user unless noted otherwise. The server derives `user_id` from the auth session and never trusts client-provided ownership.
+
+### Tasks
+
+- `GET /api/tasks`
+- `POST /api/tasks`
+- `GET /api/tasks/[id]`
+- `PATCH /api/tasks/[id]`
+- `DELETE /api/tasks/[id]`
+
+### Timers and Time Logs
+
+- `POST /api/tasks/[id]/start`
+- `POST /api/tasks/[id]/stop`
+- `GET /api/time-logs`
+- `GET /api/tasks/[id]/time-logs`
+
+### Summary
+
+- `GET /api/summary/today`
+
+## Database Setup
+
+The initial Supabase SQL lives here:
+
+```bash
+supabase/migrations/001_initial_schema.sql
+```
+
+For a manual setup, open the Supabase SQL Editor, paste the migration contents, and run it once.
+
+The migration creates:
+
+- `tasks`
+- `time_logs`
+- `task_status` enum
+- required constraints and indexes
+- Row Level Security policies on `tasks` and `time_logs`
+- a partial unique index that enforces one active timer per user
+
+If Supabase CLI is configured and linked, the migration can also be applied with:
+
+```bash
+supabase db push
+```
+
+## Environment Variables
+
+Create `.env.local` from `.env.example` and fill in your Supabase project values:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+Do not commit `.env.local`.
 
 ## Local Setup
 
@@ -21,132 +99,64 @@ ThreeSource is a full-stack task and time tracking app for managing focused work
    npm install
    ```
 
-2. Copy the environment example to a local environment file:
+2. Copy environment placeholders:
 
    ```bash
    cp .env.example .env.local
    ```
 
-3. Add your Supabase project credentials to `.env.local`. Do not commit
-   `.env.local`.
+3. Fill in Supabase values in `.env.local`.
 
-4. Start the development server:
+4. Run the Supabase SQL migration from `supabase/migrations/001_initial_schema.sql`.
+
+5. Start the app:
 
    ```bash
    npm run dev
    ```
 
-5. Open `http://localhost:3000`.
+6. Open `http://localhost:3000`.
 
-## Environment Variables
+7. Before submission, verify the production build:
 
-Create `.env.local` from `.env.example` and fill in the Supabase values:
+   ```bash
+   npm run typecheck
+   npm run build
+   ```
 
-```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-```
+## Deployment Notes
 
-## Database Setup
+Deploy the project to Vercel.
 
-The initial Supabase schema lives at
-`supabase/migrations/001_initial_schema.sql`.
+1. Push the repository to GitHub.
+2. Import the repo in Vercel.
+3. Add these environment variables in Vercel project settings:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. In Supabase Auth settings, update the Site URL and redirect URLs for the deployed Vercel URL.
+5. Confirm `.env.local` is not committed.
+6. Run a deployed smoke test for signup, login, dashboard, task CRUD, timer start/stop, and summary.
 
-To apply it with the Supabase SQL editor, open your Supabase project, create a
-new SQL query, paste the contents of the migration file, and run it once.
+## Assumptions and Design Notes
 
-If the Supabase CLI is configured and linked for this project, apply migrations
-with:
+- Dashboard is the live timer view.
+- `/summary` is a point-in-time snapshot. Use Refresh to update active timer elapsed time.
+- Starting a timer on a pending task moves it to `in_progress`.
+- Only one active timer per user is allowed to prevent inflated tracked time.
+- Completed-today uses `status = completed` plus `updated_at` within today because the schema does not currently include `completed_at`.
+- Daily summary uses local-day boundaries from the browser timezone offset.
+- AI task generation, charts, reminders, and weekly summaries are intentionally not included because they are optional or bonus scope.
 
-```bash
-supabase db push
-```
+## Test Credentials
 
-## Database Design Notes
+Test credentials: Not included by default.
 
-- `tasks` are owned by `user_id` and use the `task_status` enum.
-- `time_logs` are owned by `user_id` and linked to `tasks` through `task_id`.
-- Row Level Security is enabled on both tables to prevent cross-user access.
-- Time log policies verify that inserted or updated logs reference a task owned
-  by the same authenticated user.
-- A partial unique index enforces one active timer per user at the database
-  level.
+## Screenshots / Demo
 
-## Task API
+Screenshots can be added here before final submission:
 
-Task CRUD is exposed through REST-style Next.js Route Handlers:
-
-- `GET /api/tasks`
-- `POST /api/tasks`
-- `GET /api/tasks/[id]`
-- `PATCH /api/tasks/[id]`
-- `DELETE /api/tasks/[id]`
-
-All task routes require a Supabase Auth session, derive `user_id` from the
-authenticated user, validate request bodies with Zod, and filter reads,
-updates, and deletes by the authenticated user.
-
-## Timer API
-
-Time tracking is exposed through REST-style Next.js Route Handlers:
-
-- `POST /api/tasks/[id]/start`
-- `POST /api/tasks/[id]/stop`
-- `GET /api/time-logs`
-- `GET /api/tasks/[id]/time-logs`
-
-Timer sessions are stored in the `time_logs` table. Each row belongs to the
-authenticated user and links to a task through `task_id`. The database enforces
-one active timer per user with a partial unique index where `ended_at is null`.
-Starting a timer on a pending task automatically moves it to `in_progress`;
-stopping a timer does not automatically mark the task completed.
-
-The dashboard shows live elapsed time from the stored `started_at`, total
-completed time per task, and a simple all-time-logs view.
-
-## Daily Summary
-
-Daily summary is available through:
-
-- `GET /api/summary/today`
-- `/summary`
-
-The API requires a Supabase Auth session and uses the authenticated user for all
-queries. It accepts an optional `timezone_offset_minutes` query parameter that
-matches JavaScript `new Date().getTimezoneOffset()`, so the summary can use the
-user's local-day boundaries.
-
-The summary includes total tracked time today, tasks worked on today, completed
-tasks, pending tasks, in-progress tasks, and active timer information. Since the
-current schema does not include `completed_at`, completed-today is inferred from
-`status = completed` and `updated_at` within the local-day range.
-
-## Deployment
-
-Deployment target: Vercel.
-
-Live demo link: pending.
-
-## Current Milestone Status
-
-Milestone 4 daily summary is implemented in source:
-
-- Fresh Next.js App Router auth foundation from Milestone 0
-- Initial SQL migration for `tasks` and `time_logs`
-- Supabase Row Level Security policies for user-owned data
-- TypeScript database helper types
-- REST task CRUD route handlers
-- Protected dashboard task UI
-- REST timer start/stop route handlers
-- Time log list route handlers
-- Live elapsed timer display
-- Total completed time per task
-- Daily summary API
-- Protected summary page
-
-Intentionally not implemented yet:
-
-- Weekly summary
-- AI task generation
-- Productivity charts
-- Reminders
+- Landing page
+- Dashboard with tasks
+- Active timer
+- Time logs
+- Daily summary
