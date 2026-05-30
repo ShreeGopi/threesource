@@ -1,202 +1,270 @@
-# ThreeSource - Task and Time Tracking App
+# ThreeSource
 
-ThreeSource is a full-stack task and time tracking app built for the assignment brief. Users can sign up, manage their own tasks, start and stop real-time timers, review stored time log sessions, and see a current-day productivity summary.
+A full-stack task and time tracking app. You create tasks, run timers against them, and at the end of the day you get a clear picture of where your time actually went.
+
+Built as a full-stack assignment covering auth, REST APIs, real-time UI, and daily productivity summaries.
+
+---
 
 ## Live Demo
 
-Live Demo: [Live on vercel;)](https://threesource.vercel.app/)
+**[https://threesource.vercel.app](https://threesource.vercel.app)**
 
-## Tech Stack
+Test credentials if you want to skip signup:
 
-- Next.js App Router
-- TypeScript
-- Supabase Auth
-- Supabase Postgres
-- Supabase Row Level Security
-- Zod
-- Tailwind CSS
-- Vercel
-
-## Core Features
-
-- Sign up, login, and logout
-- Protected dashboard and summary routes
-- User-owned task CRUD
-- Natural language task input with optional title and description override
-- Task statuses: `pending`, `in_progress`, `completed`
-- Start/stop timer per task
-- One active timer per user
-- Stored time log sessions
-- Total tracked time per task
-- Daily productivity summary
-- Protected REST APIs
-- RLS-backed data isolation
-
-## API Overview
-
-All API routes require an authenticated Supabase user unless noted otherwise. The server derives `user_id` from the auth session and never trusts client-provided ownership.
-
-### Tasks
-
-- `GET /api/tasks`
-- `POST /api/tasks`
-- `GET /api/tasks/[id]`
-- `PATCH /api/tasks/[id]`
-- `DELETE /api/tasks/[id]`
-
-### Timers and Time Logs
-
-- `POST /api/tasks/[id]/start`
-- `POST /api/tasks/[id]/stop`
-- `GET /api/time-logs`
-- `GET /api/tasks/[id]/time-logs`
-
-### Summary
-
-- `GET /api/summary/today`
-
-## Database Setup
-
-The initial Supabase SQL lives here:
-
-```bash
-supabase/migrations/001_initial_schema.sql
+```
+Email:    testgopi@gmail.com
+Password: testgopi@gmail.com
 ```
 
-For a manual setup, open the Supabase SQL Editor, paste the migration contents, and run it once.
+---
 
-The migration creates:
+## What it does
 
-- `tasks`
-- `time_logs`
-- `task_status` enum
-- required constraints and indexes
-- Row Level Security policies on `tasks` and `time_logs`
-- a partial unique index that enforces one active timer per user
+**Tasks**
+Create a task by typing what you need to do in plain language. Give it a clearer title and description if you want, or just leave it as-is. Tasks have three states: Pending, In Progress, and Completed. You can edit, update, or delete them at any time.
 
-If Supabase CLI is configured and linked, the migration can also be applied with:
+**Timers**
+Each task has a Start and Stop button. Hit Start and a live timer begins ticking. Hit Stop and that session gets saved as a time log. Only one task can run at a time — this keeps your tracked time honest. If a task is Pending when you start the timer, it automatically moves to In Progress.
+
+**Time logs**
+Every session you run is saved. The dashboard groups them by task so you can see the full history — when you started, when you stopped, and how long each session was.
+
+**Daily summary**
+The `/summary` page gives you a snapshot of today: total time tracked, which tasks you worked on and for how long, what you completed, and what is still open. It respects your local timezone so "today" actually means today.
+
+---
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Framework | Next.js App Router (v16) |
+| Language | TypeScript |
+| Auth | Supabase Auth |
+| Database | Supabase Postgres |
+| Data security | Row Level Security |
+| Validation | Zod |
+| Styles | Tailwind CSS v4 |
+| Deployment | Vercel |
+| Tests | Playwright |
+
+---
+
+## Running it locally
+
+**1. Clone and install**
+
+```bash
+git clone https://github.com/your-username/threesource.git
+cd threesource
+npm install
+```
+
+**2. Set up environment**
+
+```bash
+cp .env.example .env.local
+```
+
+Open `.env.local` and fill in your Supabase project values:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+You can find both in your Supabase project under Settings → API.
+
+**3. Set up the database**
+
+Open the Supabase SQL Editor, paste the contents of `supabase/migrations/001_initial_schema.sql`, and run it. This creates the `tasks` and `time_logs` tables, the `task_status` enum, all constraints, indexes, and Row Level Security policies.
+
+If you have the Supabase CLI set up:
 
 ```bash
 supabase db push
 ```
 
-## Environment Variables
-
-Create `.env.local` from `.env.example` and fill in your Supabase project values:
+**4. Start the app**
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+npm run dev
 ```
 
-Do not commit `.env.local`.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Local Setup
-
-1. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-2. Copy environment placeholders:
-
-   ```bash
-   cp .env.example .env.local
-   ```
-
-3. Fill in Supabase values in `.env.local`.
-
-4. Run the Supabase SQL migration from `supabase/migrations/001_initial_schema.sql`.
-
-5. Start the app:
-
-   ```bash
-   npm run dev
-   ```
-
-6. Open `http://localhost:3000`.
-
-7. Before submission, verify the production build:
-
-   ```bash
-   npm run typecheck
-   npm run build
-   ```
-
-## Testing
-
-Run the core checks:
+**5. Before you ship, verify the build**
 
 ```bash
 npm run typecheck
 npm run build
 ```
 
-Run the Playwright smoke suite:
+---
+
+## API overview
+
+Every route requires an authenticated Supabase session. The server always reads `user_id` from the session — it is never accepted from the client.
+
+### Tasks
+
+| Method | Route | What it does |
+|---|---|---|
+| GET | `/api/tasks` | List all your tasks |
+| POST | `/api/tasks` | Create a task |
+| GET | `/api/tasks/[id]` | Get one task |
+| PATCH | `/api/tasks/[id]` | Edit a task |
+| DELETE | `/api/tasks/[id]` | Delete a task |
+
+### Timers and time logs
+
+| Method | Route | What it does |
+|---|---|---|
+| POST | `/api/tasks/[id]/start` | Start the timer for a task |
+| POST | `/api/tasks/[id]/stop` | Stop the timer and save the session |
+| GET | `/api/time-logs` | List all your time logs |
+| GET | `/api/tasks/[id]/time-logs` | List time logs for one task |
+
+### Summary
+
+| Method | Route | What it does |
+|---|---|---|
+| GET | `/api/summary/today?timezone_offset_minutes=X` | Today's productivity summary |
+
+Pass your local timezone offset from `new Date().getTimezoneOffset()`. Defaults to UTC if omitted.
+
+---
+
+## How data is kept secure
+
+Two layers protect every piece of data:
+
+**Application layer** — Every API route calls `getAuthenticatedUser()` first. If there is no valid session, it returns 401. Every query filters by `user_id = auth user's id` before touching the database.
+
+**Database layer (RLS)** — Row Level Security policies on both tables enforce the same rules at the Postgres level. Even if a query somehow bypassed the application check, the database would refuse to return or modify another user's rows.
+
+---
+
+## Design decisions worth knowing
+
+**One active timer per user**
+You can only run one task timer at a time. This is intentional — it prevents accidentally double-counting time and keeps the tracked data accurate. The Start button on all other tasks is disabled while one is running. This rule is also enforced at the database level with a partial unique index.
+
+**Pending → In Progress on timer start**
+If you start a timer on a Pending task, it automatically moves to In Progress. This removes a manual step that most people would forget anyway.
+
+**Completing a task with a running timer**
+If you try to mark a task Completed while its timer is running, you get a confirmation prompt first. Confirming stops the timer, saves the session, then marks the task Completed. No time is lost.
+
+**Completed tasks in the daily summary**
+The summary shows tasks as "completed today" when their `status` is `completed` and their `updated_at` timestamp falls within today's local day. There is no dedicated `completed_at` column in the schema. This is a reasonable approximation for a same-day workflow and is documented here so it is not a surprise.
+
+**Summary is a snapshot, not a live view**
+The `/dashboard` page is your live workspace — timers tick in real time there. The `/summary` page is a point-in-time snapshot. Use the Refresh button to pull the latest data, including any active timer's elapsed time.
+
+---
+
+## Testing
+
+**Type check and build**
+
+```bash
+npm run typecheck
+npm run build
+```
+
+**Playwright E2E suite**
+
+The E2E tests need a confirmed Supabase test user. Set the credentials in your environment, then run:
 
 ```bash
 npm run test:e2e
 ```
 
-For headed browser mode:
+Or with the browser visible:
 
 ```bash
 npm run test:e2e:headed
 ```
 
-The E2E suite requires an existing confirmed Supabase test user:
-
-```bash
-E2E_TEST_EMAIL= testgopi@gmail.com
-E2E_TEST_PASSWORD= testgopi@gmail.com
-```
-
-Install Playwright browser binaries locally if they are not already present:
+Install browser binaries if you have not already:
 
 ```bash
 npx playwright install chromium
 ```
 
-Signup email confirmation is still manually tested because it depends on the configured Supabase email flow.
+**What the E2E suite covers**
 
-## Deployment Notes
+- Logged-out protected routes redirect to login with a message
+- Invalid credentials show the right error
+- Full auth flow: login, dashboard loads, logout
+- Task CRUD: create, edit, update status, delete
+- Timer flow: start, live update, block second timer, stop, log appears
+- Completing a task with an active timer stops the timer first
+- Daily summary shows all four sections correctly
+- Long task titles do not break the layout
 
-Deploy the project to Vercel.
+---
 
-1. Push the repository to GitHub.
-2. Import the repo in Vercel.
-3. Add these environment variables in Vercel project settings:
+## Deployment
+
+The app is deployed on Vercel.
+
+1. Push the repository to GitHub
+2. Import it in Vercel
+3. Add environment variables in Vercel project settings:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-4. In Supabase Auth settings, update the Site URL and redirect URLs for the deployed Vercel URL.
-5. Confirm `.env.local` is not committed.
-6. Run a deployed smoke test for signup, login, dashboard, task CRUD, timer start/stop, and summary.
+4. In Supabase Auth settings, update Site URL and redirect URLs to your Vercel domain
+5. Make sure `.env.local` is not committed (it is in `.gitignore` by default)
 
-## Assumptions and Design Notes
+---
 
-- Dashboard is the live timer view.
-- `/summary` is a point-in-time snapshot. Use Refresh to update active timer elapsed time.
-- Dashboard and summary use skeleton loading states for smoother route and data loading.
-- Starting a timer on a pending task moves it to `in_progress`.
-- Only one active timer per user is allowed to prevent inflated tracked time.
-- Completed-today uses `status = completed` plus `updated_at` within today because the schema does not currently include `completed_at`.
-- Daily summary uses local-day boundaries from the browser timezone offset.
-- Vercel Speed Insights can be added later for production performance monitoring if needed.
-- AI task generation, charts, reminders, and weekly summaries are intentionally not included because they are optional or bonus scope.
+## What is not here
 
-## Test Credentials
+These were intentionally left out because they are optional or bonus scope and the core app needed to be solid first:
 
-Test credentials: 
-email: testgopi@gmail.com
-password: testgopi@gmail.com
+- AI task title/description generation
+- Productivity charts
+- Weekly summaries
+- Reminders or notifications
+- Due dates
 
-## Screenshots / Demo
+The foundation is clean enough that any of these could be added on top without reworking what is already here.
 
-Screenshots can be added here before final submission:
+---
 
-- Landing page
-- Dashboard with tasks
-- Active timer
-- Time logs
-- Daily summary
+## Project structure
+
+```
+app/
+  actions/auth.ts        # Server actions for login, signup, logout
+  api/
+    tasks/               # Task CRUD route handlers
+    time-logs/           # Time log list route
+    summary/today/       # Daily summary route
+  dashboard/             # Protected task manager page
+  summary/               # Protected daily summary page
+  login/ signup/         # Auth pages
+
+components/
+  auth/                  # Pending submit button
+  tasks/                 # TaskManager client component
+  summary/               # DailySummaryPanel client component
+
+lib/
+  api/                   # Shared auth helper, response helpers, task ownership
+  auth/                  # Auth error message helpers
+  supabase/              # Client, server, middleware, env config
+  types/                 # Database types and summary types
+  validations/           # Zod schemas for tasks, time logs, summary, auth
+  format.ts              # formatDuration and formatDateTime helpers
+  summary.ts             # Day boundary and overlap calculation helpers
+
+supabase/
+  migrations/            # SQL migration: schema, RLS, indexes
+
+tests/
+  e2e/                   # Playwright smoke suite
+```
