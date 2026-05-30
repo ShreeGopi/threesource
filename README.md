@@ -1,4 +1,4 @@
-# ThreeSource — Task and Time Tracking App
+# ThreeSource - Task and Time Tracking App
 
 ThreeSource is a full-stack task and time tracking app built for the assignment brief. Users can sign up, manage their own tasks, start and stop real-time timers, review stored time log sessions, and see a current-day productivity summary.
 
@@ -123,6 +123,42 @@ Do not commit `.env.local`.
    npm run typecheck
    npm run build
    ```
+
+## Testing
+
+Run the core checks:
+
+```bash
+npm run typecheck
+npm run build
+```
+
+Run the Playwright smoke suite:
+
+```bash
+npm run test:e2e
+```
+
+For headed browser mode:
+
+```bash
+npm run test:e2e:headed
+```
+
+The E2E suite requires an existing confirmed Supabase test user:
+
+```bash
+E2E_TEST_EMAIL=
+E2E_TEST_PASSWORD=
+```
+
+Install Playwright browser binaries locally if they are not already present:
+
+```bash
+npx playwright install chromium
+```
+
+Signup email confirmation is still manually tested because it depends on the configured Supabase email flow.
 
 ## Deployment Notes
 

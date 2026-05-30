@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { login } from "@/app/actions/auth";
+import { PendingSubmitButton } from "@/components/auth/pending-submit-button";
 
 type LoginSearchParams = {
   error?: string;
@@ -26,13 +27,19 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </p>
 
         {params.message ? (
-          <p className="mt-4 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-800">
+          <p
+            role="status"
+            className="mt-4 rounded-md bg-teal-50 px-3 py-2 text-sm text-teal-800"
+          >
             {params.message}
           </p>
         ) : null}
 
         {params.error ? (
-          <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p
+            role="alert"
+            className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700"
+          >
             {params.error}
           </p>
         ) : null}
@@ -44,6 +51,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               required
               name="email"
               type="email"
+              data-testid="login-email"
               autoComplete="email"
               className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950 outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100"
             />
@@ -55,17 +63,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               required
               name="password"
               type="password"
+              data-testid="login-password"
               autoComplete="current-password"
               className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950 outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100"
             />
           </label>
 
-          <button
-            type="submit"
-            className="w-full rounded-md bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800"
-          >
-            Log in
-          </button>
+          <PendingSubmitButton
+            idleText="Log in"
+            pendingText="Signing in..."
+            testId="login-submit"
+            className="w-full rounded-md bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+          />
         </form>
 
         <p className="mt-5 text-sm text-slate-600">

@@ -21,6 +21,10 @@ pnpm-debug.log*
 dev-server*.log
 *.tsbuildinfo
 
+# Playwright
+playwright-report/
+test-results/
+
 # OS / editor
 .DS_Store
 Thumbs.db

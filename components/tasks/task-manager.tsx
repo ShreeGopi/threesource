@@ -73,6 +73,15 @@ type TaskUpdatePayload = {
   status?: TaskStatus;
 };
 
+type TimeLogGroup = {
+  taskId: string;
+  taskTitle: string;
+  logs: TimeLogWithTask[];
+  totalSeconds: number;
+  latestStartedAt: string;
+  hasActiveLog: boolean;
+};
+
 async function readApiResponse<T>(response: Response): Promise<T> {
   const payload =
     response.status === 204 ? null : await response.json().catch(() => null);
@@ -124,6 +133,9 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [expandedLogTaskIds, setExpandedLogTaskIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const deletingTaskIdsRef = useRef(new Set<string>());
   const [createForm, setCreateForm] = useState({
     originalInput: "",
@@ -135,6 +147,21 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
     description: "",
     status: "pending",
   });
+
+  function clearFeedback() {
+    setError(null);
+    setNotice(null);
+  }
+
+  function showSuccess(message: string) {
+    setError(null);
+    setNotice(message);
+  }
+
+  function showError(message: string) {
+    setNotice(null);
+    setError(message);
+  }
 
   const activeLog = useMemo(
     () => timeLogs.find((log) => log.ended_at === null) ?? null,
@@ -161,6 +188,57 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
     return totals;
   }, [timeLogs]);
 
+  const timeLogGroups = useMemo(() => {
+    const groups = new Map<string, TimeLogGroup>();
+
+    timeLogs.forEach((log) => {
+      const isActive = log.ended_at === null;
+      const durationSeconds = isActive
+        ? getElapsedSeconds(log.started_at, now)
+        : log.duration_seconds ?? 0;
+      const existingGroup = groups.get(log.task_id);
+
+      if (existingGroup) {
+        existingGroup.logs.push(log);
+        existingGroup.totalSeconds += durationSeconds;
+        existingGroup.hasActiveLog = existingGroup.hasActiveLog || isActive;
+
+        if (
+          new Date(log.started_at).getTime() >
+          new Date(existingGroup.latestStartedAt).getTime()
+        ) {
+          existingGroup.latestStartedAt = log.started_at;
+        }
+
+        return;
+      }
+
+      groups.set(log.task_id, {
+        taskId: log.task_id,
+        taskTitle: log.tasks?.title ?? "Deleted task",
+        logs: [log],
+        totalSeconds: durationSeconds,
+        latestStartedAt: log.started_at,
+        hasActiveLog: isActive,
+      });
+    });
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        logs: [...group.logs].sort(
+          (firstLog, secondLog) =>
+            new Date(secondLog.started_at).getTime() -
+            new Date(firstLog.started_at).getTime(),
+        ),
+      }))
+      .sort(
+        (firstGroup, secondGroup) =>
+          new Date(secondGroup.latestStartedAt).getTime() -
+          new Date(firstGroup.latestStartedAt).getTime(),
+      );
+  }, [timeLogs, now]);
+
   async function loadDashboardData() {
     setError(null);
 
@@ -186,7 +264,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
       setTasks(tasksPayload.tasks);
       setTimeLogs(logsPayload.time_logs);
     } catch (caughtError) {
-      setError(
+      showError(
         caughtError instanceof Error
           ? caughtError.message
           : "Unable to load dashboard data.",
@@ -208,10 +286,23 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
     return () => window.clearInterval(intervalId);
   }, []);
 
+  function toggleLogGroup(taskId: string) {
+    setExpandedLogTaskIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (nextIds.has(taskId)) {
+        nextIds.delete(taskId);
+      } else {
+        nextIds.add(taskId);
+      }
+
+      return nextIds;
+    });
+  }
+
   async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setNotice(null);
+    clearFeedback();
     setIsCreating(true);
 
     try {
@@ -230,8 +321,9 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
         title: "",
         description: "",
       });
+      showSuccess("Task created.");
     } catch (caughtError) {
-      setError(
+      showError(
         caughtError instanceof Error
           ? caughtError.message
           : "Unable to create task.",
@@ -250,9 +342,12 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
     });
   }
 
-  async function updateTask(taskId: string, updates: TaskUpdatePayload) {
-    setError(null);
-    setNotice(null);
+  async function updateTask(
+    taskId: string,
+    updates: TaskUpdatePayload,
+    successMessage?: string | null,
+  ) {
+    clearFeedback();
     setUpdatingId(taskId);
 
     try {
@@ -268,9 +363,12 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
       setTasks((currentTasks) =>
         currentTasks.map((task) => (task.id === taskId ? payload.task : task)),
       );
+      if (successMessage) {
+        showSuccess(successMessage);
+      }
       return payload.task;
     } catch (caughtError) {
-      setError(
+      showError(
         caughtError instanceof Error
           ? caughtError.message
           : "Unable to update task.",
@@ -283,15 +381,39 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
 
   async function handleEditSubmit(
     event: FormEvent<HTMLFormElement>,
-    taskId: string,
+    task: Task,
   ) {
     event.preventDefault();
 
-    const updatedTask = await updateTask(taskId, {
+    const updates = {
       title: editForm.title,
       description: editForm.description.trim() ? editForm.description : null,
       status: editForm.status,
-    });
+    };
+
+    if (editForm.status === "completed" && activeLog?.task_id === task.id) {
+      const shouldStopTimer = window.confirm(
+        "This task has a running timer. Completing it will stop the timer and save the current session.",
+      );
+
+      if (!shouldStopTimer) {
+        return;
+      }
+
+      const stoppedLog = await stopTimerForTask(task, null);
+
+      if (!stoppedLog) {
+        return;
+      }
+    }
+
+    const updatedTask = await updateTask(
+      task.id,
+      updates,
+      editForm.status === "completed" && task.status !== "completed"
+        ? "Task completed."
+        : "Task updated.",
+    );
 
     if (updatedTask) {
       setEditingId(null);
@@ -303,7 +425,35 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
     event: ChangeEvent<HTMLSelectElement>,
   ) {
     const status = event.target.value as TaskStatus;
-    await updateTask(task.id, { status });
+
+    if (status === task.status) {
+      return;
+    }
+
+    if (status === "completed" && activeLog?.task_id === task.id) {
+      const shouldStopTimer = window.confirm(
+        "This task has a running timer. Completing it will stop the timer and save the current session.",
+      );
+
+      if (!shouldStopTimer) {
+        return;
+      }
+
+      const stoppedLog = await stopTimerForTask(task, null);
+
+      if (!stoppedLog) {
+        return;
+      }
+
+      await updateTask(task.id, { status }, "Task completed.");
+      return;
+    }
+
+    await updateTask(
+      task.id,
+      { status },
+      status === "completed" ? "Task completed." : "Task updated.",
+    );
   }
 
   async function handleDeleteTask(task: Task) {
@@ -315,8 +465,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
       return;
     }
 
-    setError(null);
-    setNotice(null);
+    clearFeedback();
     deletingTaskIdsRef.current.add(task.id);
     setDeletingId(task.id);
 
@@ -338,6 +487,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
       if (editingId === task.id) {
         setEditingId(null);
       }
+      showSuccess("Task deleted.");
     } catch (caughtError) {
       if (
         caughtError instanceof ApiRequestError &&
@@ -349,12 +499,12 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
         setTimeLogs((currentLogs) =>
           currentLogs.filter((log) => log.task_id !== task.id),
         );
-        setNotice("That task was already deleted. The dashboard was refreshed.");
+        showSuccess("That task was already deleted. The dashboard was refreshed.");
         void loadDashboardData();
         return;
       }
 
-      setError(
+      showError(
         caughtError instanceof Error
           ? caughtError.message
           : "Unable to delete task. Please refresh and try again.",
@@ -366,8 +516,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
   }
 
   async function handleStartTimer(task: Task) {
-    setError(null);
-    setNotice(null);
+    clearFeedback();
     setTimerTaskId(task.id);
 
     try {
@@ -389,8 +538,9 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
           ),
         );
       }
+      showSuccess("Timer started.");
     } catch (caughtError) {
-      setError(
+      showError(
         caughtError instanceof Error
           ? caughtError.message
           : "Unable to start timer.",
@@ -400,9 +550,11 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
     }
   }
 
-  async function handleStopTimer(task: Task) {
-    setError(null);
-    setNotice(null);
+  async function stopTimerForTask(
+    task: Task,
+    successMessage: string | null = "Timer stopped and saved.",
+  ) {
+    clearFeedback();
     setTimerTaskId(task.id);
 
     try {
@@ -418,19 +570,28 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
           log.id === payload.time_log.id ? payload.time_log : log,
         ),
       );
+      if (successMessage) {
+        showSuccess(successMessage);
+      }
+      return payload.time_log;
     } catch (caughtError) {
-      setError(
+      showError(
         caughtError instanceof Error
           ? caughtError.message
           : "Unable to stop timer.",
       );
+      return null;
     } finally {
       setTimerTaskId(null);
     }
   }
 
+  async function handleStopTimer(task: Task) {
+    await stopTimerForTask(task);
+  }
+
   return (
-    <section className="space-y-8 py-8">
+    <section data-testid="task-manager" className="space-y-8 py-8">
       <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -471,6 +632,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
             <input
               required
               value={createForm.originalInput}
+              data-testid="task-original-input"
               onChange={(event) =>
                 setCreateForm((currentForm) => ({
                   ...currentForm,
@@ -490,6 +652,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
               </span>
               <input
                 value={createForm.title}
+                data-testid="task-title-input"
                 onChange={(event) =>
                   setCreateForm((currentForm) => ({
                     ...currentForm,
@@ -508,6 +671,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
               </span>
               <input
                 value={createForm.description}
+                data-testid="task-description-input"
                 onChange={(event) =>
                   setCreateForm((currentForm) => ({
                     ...currentForm,
@@ -525,6 +689,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
             <button
               type="submit"
               disabled={isCreating}
+              data-testid="task-create-submit"
               className="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
             >
               {isCreating ? "Creating..." : "Create task"}
@@ -534,13 +699,21 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
       </div>
 
       {error ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p
+          role="alert"
+          data-testid="feedback-error"
+          className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
           {error}
         </p>
       ) : null}
 
       {notice ? (
-        <p className="rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
+        <p
+          role="status"
+          data-testid="feedback-success"
+          className="rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800"
+        >
           {notice}
         </p>
       ) : null}
@@ -582,11 +755,12 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
           return (
             <article
               key={task.id}
+              data-testid="task-card"
               className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
             >
               {isEditing ? (
                 <form
-                  onSubmit={(event) => handleEditSubmit(event, task.id)}
+                  onSubmit={(event) => handleEditSubmit(event, task)}
                   className="space-y-4"
                 >
                   <div className="grid gap-4 lg:grid-cols-[1fr_180px]">
@@ -597,6 +771,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                       <input
                         required
                         value={editForm.title}
+                        data-testid="task-edit-title"
                         onChange={(event) =>
                           setEditForm((currentForm) => ({
                             ...currentForm,
@@ -614,6 +789,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                       </span>
                       <select
                         value={editForm.status}
+                        data-testid="task-edit-status"
                         onChange={(event) =>
                           setEditForm((currentForm) => ({
                             ...currentForm,
@@ -637,6 +813,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                     </span>
                     <textarea
                       value={editForm.description}
+                      data-testid="task-edit-description"
                       onChange={(event) =>
                         setEditForm((currentForm) => ({
                           ...currentForm,
@@ -660,6 +837,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                     <button
                       type="submit"
                       disabled={isBusy}
+                      data-testid="task-edit-save"
                       className="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
                     >
                       {updatingId === task.id ? "Saving..." : "Save changes"}
@@ -671,7 +849,10 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="break-words text-lg font-semibold text-slate-950">
+                        <h3
+                          data-testid="task-title"
+                          className="break-words text-lg font-semibold text-slate-950"
+                        >
                           {task.title}
                         </h3>
                         <span
@@ -686,7 +867,10 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                         ) : null}
                       </div>
                       {task.description ? (
-                        <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">
+                        <p
+                          data-testid="task-description"
+                          className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600"
+                        >
                           {task.description}
                         </p>
                       ) : null}
@@ -696,6 +880,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                       aria-label={`Status for ${task.title}`}
                       value={task.status}
                       disabled={isBusy}
+                      data-testid="task-status-select"
                       onChange={(event) => handleStatusChange(task, event)}
                       className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100 disabled:cursor-not-allowed disabled:bg-slate-100 sm:w-44"
                     >
@@ -708,7 +893,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                   </div>
 
                   <div className="grid gap-3 border-t border-slate-200 pt-4 text-sm sm:grid-cols-3">
-                    <div>
+                    <div data-testid="task-completed-time">
                       <p className="font-medium text-slate-500">
                         Completed time
                       </p>
@@ -716,7 +901,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                         {formatDuration(completedSeconds)}
                       </p>
                     </div>
-                    <div>
+                    <div data-testid="task-current-run">
                       <p className="font-medium text-slate-500">Current run</p>
                       <p className="mt-1 font-semibold text-slate-950">
                         {taskActiveLog ? formatDuration(activeSeconds) : "-"}
@@ -741,6 +926,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                           type="button"
                           onClick={() => handleStopTimer(task)}
                           disabled={isBusy}
+                          data-testid="task-stop-button"
                           className="rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
                         >
                           {timerTaskId === task.id ? "Stopping..." : "Stop"}
@@ -750,6 +936,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                           type="button"
                           onClick={() => handleStartTimer(task)}
                           disabled={isBusy || isAnotherTaskRunning}
+                          data-testid="task-start-button"
                           title={
                             isAnotherTaskRunning
                               ? "Stop the active timer before starting another task."
@@ -764,6 +951,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                         type="button"
                         onClick={() => startEditing(task)}
                         disabled={isBusy}
+                        data-testid="task-edit-button"
                         className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
                       >
                         Edit
@@ -772,6 +960,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                         type="button"
                         onClick={() => handleDeleteTask(task)}
                         disabled={isBusy}
+                        data-testid="task-delete-button"
                         className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400"
                       >
                         {deletingId === task.id ? "Deleting..." : "Delete"}
@@ -785,7 +974,10 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
         })}
       </div>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <section
+        data-testid="time-logs-section"
+        className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+      >
         <div className="flex flex-col gap-1 border-b border-slate-200 pb-4">
           <h2 className="text-xl font-semibold text-slate-950">Time logs</h2>
           <p className="text-sm text-slate-600">
@@ -808,43 +1000,100 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
           </div>
         ) : null}
 
-        {timeLogs.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="mt-4 w-full min-w-[680px] border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="py-3 pr-4 font-medium">Task</th>
-                  <th className="py-3 pr-4 font-medium">Started</th>
-                  <th className="py-3 pr-4 font-medium">Ended</th>
-                  <th className="py-3 pr-4 font-medium">Duration</th>
-                </tr>
-              </thead>
-              <tbody>
-                {timeLogs.map((log) => {
-                  const isActive = log.ended_at === null;
-                  const durationSeconds = isActive
-                    ? getElapsedSeconds(log.started_at, now)
-                    : log.duration_seconds ?? 0;
+        {timeLogGroups.length > 0 ? (
+          <div className="mt-4 divide-y divide-slate-100">
+            {timeLogGroups.map((group) => {
+              const isExpanded = expandedLogTaskIds.has(group.taskId);
 
-                  return (
-                    <tr key={log.id} className="border-b border-slate-100">
-                      <td className="py-3 pr-4 font-medium text-slate-950">
-                        {log.tasks?.title ?? "Deleted task"}
-                      </td>
-                      <td className="py-3 pr-4 text-slate-600">
-                        {formatDateTime(log.started_at)}
-                      </td>
-                      <td className="py-3 pr-4 text-slate-600">
-                        {log.ended_at ? formatDateTime(log.ended_at) : "Active"}
-                      </td>
-                      <td className="py-3 pr-4 font-semibold text-slate-950">
-                        {formatDuration(durationSeconds)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+              return (
+                <div
+                  key={group.taskId}
+                  data-testid="time-log-group"
+                  className="py-4 first:pt-0 last:pb-0"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="min-w-0 break-words text-base font-semibold text-slate-950">
+                          {group.taskTitle}
+                        </h3>
+                        {group.hasActiveLog ? (
+                          <span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800">
+                            Active
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {group.logs.length}{" "}
+                        {group.logs.length === 1 ? "session" : "sessions"} -
+                        latest {formatDateTime(group.latestStartedAt)}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                      <span className="text-sm font-semibold text-slate-950">
+                        {formatDuration(group.totalSeconds)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => toggleLogGroup(group.taskId)}
+                        aria-expanded={isExpanded}
+                        data-testid="time-log-toggle"
+                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+                      >
+                        {isExpanded ? "Hide sessions" : "Show sessions"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {isExpanded ? (
+                    <div className="mt-4 space-y-3 border-l border-slate-200 pl-4">
+                      {group.logs.map((log) => {
+                        const isActive = log.ended_at === null;
+                        const durationSeconds = isActive
+                          ? getElapsedSeconds(log.started_at, now)
+                          : log.duration_seconds ?? 0;
+
+                        return (
+                          <div
+                            key={log.id}
+                            data-testid="time-log-session"
+                            className="grid gap-2 text-sm sm:grid-cols-[1fr_1fr_auto]"
+                          >
+                            <div className="min-w-0">
+                              <p className="font-medium text-slate-500">
+                                Started
+                              </p>
+                              <p className="mt-1 break-words text-slate-950">
+                                {formatDateTime(log.started_at)}
+                              </p>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-slate-500">
+                                Ended
+                              </p>
+                              <p className="mt-1 break-words text-slate-950">
+                                {log.ended_at
+                                  ? formatDateTime(log.ended_at)
+                                  : "Active"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="font-medium text-slate-500">
+                                Duration
+                              </p>
+                              <p className="mt-1 font-semibold text-slate-950">
+                                {formatDuration(durationSeconds)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         ) : null}
       </section>

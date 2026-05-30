@@ -44,9 +44,11 @@ function TaskList({
       {tasks.map((task) => (
         <li
           key={task.id}
-          className="flex flex-col gap-1 border-b border-slate-100 pb-3 last:border-0 last:pb-0"
+          className="flex min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-0 last:pb-0"
         >
-          <span className="font-medium text-slate-950">{task.title}</span>
+          <span className="min-w-0 break-words font-medium text-slate-950">
+            {task.title}
+          </span>
           <span className="text-sm text-slate-500">
             Updated {formatDateTime(task.updated_at)}
           </span>
@@ -93,7 +95,7 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
   }, []);
 
   return (
-    <section className="space-y-6 py-8">
+    <section data-testid="daily-summary" className="space-y-6 py-8">
       <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -135,7 +137,10 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
               <p className="text-sm font-medium text-slate-500">
                 Total tracked
               </p>
-              <p className="mt-2 text-3xl font-bold text-slate-950">
+              <p
+                data-testid="summary-total-tracked"
+                className="mt-2 text-3xl font-bold text-slate-950"
+              >
                 {formatDuration(summary.total_tracked_seconds)}
               </p>
             </div>
@@ -167,11 +172,14 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
       {summary ? (
         <>
           {summary.active_log ? (
-            <section className="rounded-lg border border-teal-200 bg-white p-5 shadow-sm">
+            <section
+              data-testid="summary-active-log"
+              className="rounded-lg border border-teal-200 bg-white p-5 shadow-sm"
+            >
               <p className="text-sm font-semibold uppercase text-teal-700">
                 Active timer
               </p>
-              <h3 className="mt-2 text-lg font-semibold text-slate-950">
+              <h3 className="mt-2 min-w-0 break-words text-lg font-semibold text-slate-950">
                 {summary.active_log.task?.title ?? "Active task"}
               </h3>
               <p className="mt-2 text-sm text-slate-600">
@@ -183,7 +191,10 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
             </section>
           ) : null}
 
-          <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <section
+            data-testid="summary-worked"
+            className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+          >
             <h3 className="text-lg font-semibold text-slate-950">
               Tasks worked on today
             </h3>
@@ -196,12 +207,12 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
                 {summary.tasks_worked_on.map((task) => (
                   <li
                     key={task.id}
-                    className="flex flex-col gap-1 border-b border-slate-100 pb-3 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex min-w-0 flex-col gap-1 border-b border-slate-100 pb-3 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <span className="font-medium text-slate-950">
+                    <span className="min-w-0 break-words font-medium text-slate-950">
                       {task.title}
                     </span>
-                    <span className="text-sm font-semibold text-slate-700">
+                    <span className="shrink-0 text-sm font-semibold text-slate-700">
                       {formatDuration(task.time_tracked_seconds)}
                     </span>
                   </li>
@@ -211,7 +222,10 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
           </section>
 
           <div className="grid gap-6 lg:grid-cols-3">
-            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <section
+              data-testid="summary-completed"
+              className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+            >
               <h3 className="text-lg font-semibold text-slate-950">
                 Completed today
               </h3>
@@ -223,7 +237,10 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
               </div>
             </section>
 
-            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <section
+              data-testid="summary-pending"
+              className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+            >
               <h3 className="text-lg font-semibold text-slate-950">Pending</h3>
               <div className="mt-4">
                 <TaskList
@@ -233,7 +250,10 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
               </div>
             </section>
 
-            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <section
+              data-testid="summary-in-progress"
+              className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+            >
               <h3 className="text-lg font-semibold text-slate-950">
                 In progress
               </h3>
