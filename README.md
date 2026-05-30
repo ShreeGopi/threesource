@@ -13,8 +13,8 @@ Built as a full-stack assignment covering auth, REST APIs, real-time UI, and dai
 Test credentials if you want to skip signup:
 
 ```
-Email:    testgopi@gmail.com
-Password: testgopi@gmail.com
+Email:    threesource@gmail.com
+Password: threesource@gmail.com
 ```
 
 ---
