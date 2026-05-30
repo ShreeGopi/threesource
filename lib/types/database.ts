@@ -41,6 +41,7 @@ export type TimeLog = {
 
 export type TimeLogWithTask = TimeLog & {
   tasks: {
+    status: TaskStatus;
     title: string;
   } | null;
 };

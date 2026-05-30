@@ -49,7 +49,7 @@ export async function GET(
 
   const { data, error } = await supabase
     .from("time_logs")
-    .select("*, tasks(title)")
+    .select("*, tasks(title, status)")
     .eq("user_id", user.id)
     .eq("task_id", task.id)
     .order("started_at", { ascending: false });

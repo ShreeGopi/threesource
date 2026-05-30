@@ -23,7 +23,7 @@ async function getActiveLog(
 ) {
   return supabase
     .from("time_logs")
-    .select("*, tasks(title)")
+    .select("*, tasks(title, status)")
     .eq("user_id", userId)
     .is("ended_at", null)
     .maybeSingle();
@@ -77,7 +77,7 @@ export async function POST(_request: NextRequest, context: StartRouteContext) {
       user_id: user.id,
       task_id: task.id,
     })
-    .select("*, tasks(title)")
+    .select("*, tasks(title, status)")
     .single();
 
   if (createError) {

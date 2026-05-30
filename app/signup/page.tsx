@@ -28,6 +28,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
         {params.error ? (
           <p
             role="alert"
+            data-testid="signup-error"
             className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700"
           >
             {params.error}

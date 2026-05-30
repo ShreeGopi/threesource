@@ -58,6 +58,83 @@ function TaskList({
   );
 }
 
+function SkeletonBlock({ className }: { className: string }) {
+  return <div className={`rounded bg-slate-200 ${className}`} />;
+}
+
+function SummaryStatsSkeleton() {
+  return (
+    <div
+      data-testid="summary-stats-loading"
+      aria-label="Loading summary stats"
+      className="mt-6 grid animate-pulse gap-4 sm:grid-cols-2 lg:grid-cols-4"
+    >
+      {[0, 1, 2, 3].map((item) => (
+        <div key={item} className="space-y-2">
+          <SkeletonBlock className="h-4 w-24" />
+          <SkeletonBlock className="h-9 w-20" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SummarySectionsSkeleton() {
+  return (
+    <div
+      data-testid="summary-sections-loading"
+      aria-label="Loading summary sections"
+      className="space-y-6"
+    >
+      <section className="rounded-lg border border-teal-200 bg-white p-5 shadow-sm">
+        <div className="animate-pulse space-y-3">
+          <SkeletonBlock className="h-4 w-28" />
+          <SkeletonBlock className="h-5 w-60 max-w-full" />
+          <SkeletonBlock className="h-4 w-44" />
+          <SkeletonBlock className="h-8 w-24" />
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="animate-pulse space-y-4">
+          <SkeletonBlock className="h-5 w-48" />
+          {[0, 1, 2].map((item) => (
+            <div
+              key={item}
+              className="flex flex-col gap-2 border-b border-slate-100 pb-3 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <SkeletonBlock className="h-4 w-64 max-w-full" />
+              <SkeletonBlock className="h-4 w-20" />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {[0, 1, 2].map((section) => (
+          <section
+            key={section}
+            className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+          >
+            <div className="animate-pulse space-y-4">
+              <SkeletonBlock className="h-5 w-36" />
+              {[0, 1, 2].map((item) => (
+                <div
+                  key={item}
+                  className="space-y-2 border-b border-slate-100 pb-3 last:border-0 last:pb-0"
+                >
+                  <SkeletonBlock className="h-4 w-full max-w-48" />
+                  <SkeletonBlock className="h-3 w-28" />
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
   const [summary, setSummary] = useState<DailySummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,9 +198,7 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
           </button>
         </div>
 
-        {isLoading ? (
-          <p className="mt-6 text-sm text-slate-600">Loading summary...</p>
-        ) : null}
+        {isLoading ? <SummaryStatsSkeleton /> : null}
 
         {error ? (
           <p className="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -168,6 +243,8 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
           </div>
         ) : null}
       </div>
+
+      {isLoading ? <SummarySectionsSkeleton /> : null}
 
       {summary ? (
         <>

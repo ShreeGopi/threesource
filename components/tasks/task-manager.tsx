@@ -76,6 +76,7 @@ type TaskUpdatePayload = {
 type TimeLogGroup = {
   taskId: string;
   taskTitle: string;
+  taskStatus: TaskStatus | null;
   logs: TimeLogWithTask[];
   totalSeconds: number;
   latestStartedAt: string;
@@ -118,6 +119,81 @@ function getElapsedSeconds(startedAt: string, now: number) {
   return Math.max(
     0,
     Math.floor((now - new Date(startedAt).getTime()) / 1000),
+  );
+}
+
+function SkeletonBlock({ className }: { className: string }) {
+  return <div className={`rounded bg-slate-200 ${className}`} />;
+}
+
+function TaskCardsSkeleton() {
+  return (
+    <div
+      data-testid="task-list-loading"
+      aria-label="Loading tasks"
+      className="space-y-4"
+    >
+      {[0, 1, 2].map((item) => (
+        <article
+          key={item}
+          className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+        >
+          <div className="animate-pulse space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 flex-1 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <SkeletonBlock className="h-5 w-52 max-w-full" />
+                  <SkeletonBlock className="h-6 w-24 rounded-full" />
+                </div>
+                <SkeletonBlock className="h-4 w-full max-w-2xl" />
+                <SkeletonBlock className="h-4 w-4/5 max-w-xl" />
+              </div>
+              <SkeletonBlock className="h-10 w-full sm:w-44" />
+            </div>
+            <div className="grid gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3">
+              <SkeletonBlock className="h-12 w-full" />
+              <SkeletonBlock className="h-12 w-full" />
+              <SkeletonBlock className="h-12 w-full" />
+            </div>
+            <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <SkeletonBlock className="h-4 w-40" />
+              <div className="flex flex-wrap gap-3">
+                <SkeletonBlock className="h-9 w-16" />
+                <SkeletonBlock className="h-9 w-16" />
+                <SkeletonBlock className="h-9 w-20" />
+              </div>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function TimeLogsSkeleton() {
+  return (
+    <div
+      data-testid="time-logs-loading"
+      aria-label="Loading time logs"
+      className="mt-4 divide-y divide-slate-100"
+    >
+      {[0, 1].map((item) => (
+        <div key={item} className="py-4 first:pt-0 last:pb-0">
+          <div className="animate-pulse space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 flex-1 space-y-2">
+                <SkeletonBlock className="h-5 w-56 max-w-full" />
+                <SkeletonBlock className="h-4 w-64 max-w-full" />
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <SkeletonBlock className="h-5 w-16" />
+                <SkeletonBlock className="h-9 w-28" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -188,6 +264,11 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
     return totals;
   }, [timeLogs]);
 
+  const taskStatusById = useMemo(
+    () => new Map(tasks.map((task) => [task.id, task.status])),
+    [tasks],
+  );
+
   const timeLogGroups = useMemo(() => {
     const groups = new Map<string, TimeLogGroup>();
 
@@ -197,8 +278,11 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
         ? getElapsedSeconds(log.started_at, now)
         : log.duration_seconds ?? 0;
       const existingGroup = groups.get(log.task_id);
+      const taskStatus =
+        taskStatusById.get(log.task_id) ?? log.tasks?.status ?? null;
 
       if (existingGroup) {
+        existingGroup.taskStatus = taskStatus ?? existingGroup.taskStatus;
         existingGroup.logs.push(log);
         existingGroup.totalSeconds += durationSeconds;
         existingGroup.hasActiveLog = existingGroup.hasActiveLog || isActive;
@@ -216,6 +300,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
       groups.set(log.task_id, {
         taskId: log.task_id,
         taskTitle: log.tasks?.title ?? "Deleted task",
+        taskStatus,
         logs: [log],
         totalSeconds: durationSeconds,
         latestStartedAt: log.started_at,
@@ -237,7 +322,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
           new Date(secondGroup.latestStartedAt).getTime() -
           new Date(firstGroup.latestStartedAt).getTime(),
       );
-  }, [timeLogs, now]);
+  }, [timeLogs, now, taskStatusById]);
 
   async function loadDashboardData() {
     setError(null);
@@ -720,9 +805,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
 
       <div className="space-y-4">
         {isLoading ? (
-          <p className="rounded-md border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
-            Loading tasks...
-          </p>
+          <TaskCardsSkeleton />
         ) : null}
 
         {!isLoading && tasks.length === 0 ? (
@@ -986,7 +1069,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
         </div>
 
         {isLoading ? (
-          <p className="py-6 text-sm text-slate-600">Loading time logs...</p>
+          <TimeLogsSkeleton />
         ) : null}
 
         {!isLoading && timeLogs.length === 0 ? (
@@ -1017,6 +1100,14 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                         <h3 className="min-w-0 break-words text-base font-semibold text-slate-950">
                           {group.taskTitle}
                         </h3>
+                        {group.taskStatus ? (
+                          <span
+                            data-testid="time-log-task-status"
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[group.taskStatus]}`}
+                          >
+                            {statusLabels[group.taskStatus]}
+                          </span>
+                        ) : null}
                         {group.hasActiveLog ? (
                           <span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800">
                             Active

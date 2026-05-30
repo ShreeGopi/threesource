@@ -177,10 +177,12 @@ Deploy the project to Vercel.
 
 - Dashboard is the live timer view.
 - `/summary` is a point-in-time snapshot. Use Refresh to update active timer elapsed time.
+- Dashboard and summary use skeleton loading states for smoother route and data loading.
 - Starting a timer on a pending task moves it to `in_progress`.
 - Only one active timer per user is allowed to prevent inflated tracked time.
 - Completed-today uses `status = completed` plus `updated_at` within today because the schema does not currently include `completed_at`.
 - Daily summary uses local-day boundaries from the browser timezone offset.
+- Vercel Speed Insights can be added later for production performance monitoring if needed.
 - AI task generation, charts, reminders, and weekly summaries are intentionally not included because they are optional or bonus scope.
 
 ## Test Credentials

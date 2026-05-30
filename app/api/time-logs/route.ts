@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("time_logs")
-    .select("*, tasks(title)")
+    .select("*, tasks(title, status)")
     .eq("user_id", user.id)
     .order("started_at", { ascending: false });
 

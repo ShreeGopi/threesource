@@ -58,8 +58,8 @@ function isCreateTaskResponse(url: string, method: string) {
 async function waitForDashboardReady(page: Page) {
   await expect(page.getByTestId("task-manager")).toBeVisible();
   await expect(page.getByTestId("task-create-submit")).toBeVisible();
-  await expect(page.getByText("Loading tasks...")).toHaveCount(0);
-  await expect(page.getByText("Loading time logs...")).toHaveCount(0);
+  await expect(page.getByTestId("task-list-loading")).toHaveCount(0);
+  await expect(page.getByTestId("time-logs-loading")).toHaveCount(0);
   await expect(page.getByTestId("task-create-submit")).toBeEnabled();
 }
 
@@ -230,6 +230,22 @@ test.describe("ThreeSource smoke flow", () => {
   );
 });
 
+  test("invalid login credentials show a credential-specific error", async ({
+    page,
+  }) => {
+  await page.goto("/login");
+  await page
+    .getByTestId("login-email")
+    .fill(`missing-${Date.now()}@example.com`);
+  await page.getByTestId("login-password").fill("not-the-right-password");
+  await page.getByTestId("login-submit").click();
+
+  await expect(page).toHaveURL(/\/login\?error=/);
+  await expect(page.getByTestId("login-error")).toContainText(
+    "Invalid email or password.",
+  );
+});
+
   test("auth flow logs in, loads dashboard, and logs out", async ({ page }) => {
   await login(page);
 
@@ -363,6 +379,12 @@ test.describe("ThreeSource smoke flow", () => {
   await expectSuccessFeedback(page, /Timer stopped and saved/i);
   await trackedCard.getByTestId("task-status-select").selectOption("completed");
   await expectSuccessFeedback(page, /Task completed/i);
+  const trackedLogGroup = page.getByTestId("time-log-group").filter({
+    hasText: trackedTitle,
+  });
+  await expect(
+    trackedLogGroup.getByTestId("time-log-task-status"),
+  ).toContainText("Completed");
 
   await page.getByRole("link", { name: "Summary" }).click();
   await expect(page).toHaveURL(/\/summary/);

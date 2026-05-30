@@ -76,7 +76,7 @@ export async function POST(_request: NextRequest, context: StopRouteContext) {
     .eq("id", activeLog.id)
     .eq("user_id", user.id)
     .is("ended_at", null)
-    .select("*, tasks(title)")
+    .select("*, tasks(title, status)")
     .single();
 
   if (updateError) {

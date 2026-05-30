@@ -2,12 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  getLoginErrorMessage,
+  getSignupErrorMessage,
+} from "@/lib/auth/error-messages";
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema, signupSchema } from "@/lib/validations/auth";
 
 const formValue = (formData: FormData, key: string) => {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
+};
+
+const redirectWithError = (path: "/login" | "/signup", message: string) => {
+  redirect(`${path}?error=${encodeURIComponent(message)}`);
 };
 
 export async function login(formData: FormData) {
@@ -20,11 +28,18 @@ export async function login(formData: FormData) {
     redirect("/login?error=Enter%20a%20valid%20email%20and%20password.");
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  let signInError: unknown = null;
 
-  if (error) {
-    redirect("/login?error=Invalid%20email%20or%20password.");
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.signInWithPassword(parsed.data);
+    signInError = error;
+  } catch (error) {
+    redirectWithError("/login", getLoginErrorMessage(error));
+  }
+
+  if (signInError) {
+    redirectWithError("/login", getLoginErrorMessage(signInError));
   }
 
   revalidatePath("/", "layout");
@@ -43,11 +58,18 @@ export async function signup(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signUp(parsed.data);
+  let signUpError: unknown = null;
 
-  if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.signUp(parsed.data);
+    signUpError = error;
+  } catch (error) {
+    redirectWithError("/signup", getSignupErrorMessage(error));
+  }
+
+  if (signUpError) {
+    redirectWithError("/signup", getSignupErrorMessage(signUpError));
   }
 
   redirect(
