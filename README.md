@@ -148,8 +148,8 @@ npm run test:e2e:headed
 The E2E suite requires an existing confirmed Supabase test user:
 
 ```bash
-E2E_TEST_EMAIL=
-E2E_TEST_PASSWORD=
+E2E_TEST_EMAIL= testgopi@gmail.com
+E2E_TEST_PASSWORD= testgopi@gmail.com
 ```
 
 Install Playwright browser binaries locally if they are not already present:
@@ -185,7 +185,9 @@ Deploy the project to Vercel.
 
 ## Test Credentials
 
-Test credentials: Not included by default.
+Test credentials: 
+email: testgopi@gmail.com
+password: testgopi@gmail.com
 
 ## Screenshots / Demo
 
