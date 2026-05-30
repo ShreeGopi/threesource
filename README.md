@@ -4,7 +4,7 @@ ThreeSource is a full-stack task and time tracking app built for the assignment 
 
 ## Live Demo
 
-Live Demo: Pending deployment
+Live Demo: [Live on vercel..;)](https://threesource.vercel.app/)
 
 ## Tech Stack
 
