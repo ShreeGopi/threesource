@@ -16,7 +16,11 @@ Test credentials if you want to skip signup:
 Email:    threesource@gmail.com
 Password: threesource@gmail.com
 ```
-
+```
+.env credentials
+```
+NEXT_PUBLIC_SUPABASE_URL= https://npkunvdiasyxttflrpiv.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY= sb_publishable_p0_8h-22-4sD82CSIp6H_w_UFcQJFWh
 ---
 
 ## What it does
