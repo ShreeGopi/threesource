@@ -6,7 +6,7 @@ function DashboardTaskCardSkeleton({ item }: { item: number }) {
   return (
     <article
       key={item}
-      className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
     >
       <div className="animate-pulse space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -42,21 +42,22 @@ export default function DashboardLoading() {
   return (
     <main
       aria-label="Loading dashboard"
-      className="mx-auto min-h-screen w-full max-w-5xl px-6 py-8"
+      className="mx-auto min-h-screen w-full max-w-6xl px-6 py-6"
     >
-      <nav className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+      <nav className="rounded-2xl border border-slate-200 bg-white/85 px-5 py-4 shadow-sm backdrop-blur sm:flex sm:items-center sm:justify-between">
         <div className="animate-pulse space-y-2">
           <SkeletonBlock className="h-4 w-40" />
           <SkeletonBlock className="h-8 w-72 max-w-full" />
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="mt-4 flex flex-wrap gap-3 sm:mt-0">
+          <SkeletonBlock className="h-10 w-24" />
           <SkeletonBlock className="h-10 w-24" />
           <SkeletonBlock className="h-10 w-24" />
         </div>
       </nav>
 
-      <section className="space-y-8 py-8">
-        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="space-y-8 py-6">
+        <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
           <div className="animate-pulse space-y-5">
             <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="space-y-2">
@@ -86,7 +87,7 @@ export default function DashboardLoading() {
           ))}
         </div>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
           <div className="animate-pulse space-y-4">
             <div className="border-b border-slate-200 pb-4">
               <SkeletonBlock className="h-6 w-28" />

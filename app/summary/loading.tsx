@@ -6,21 +6,22 @@ export default function SummaryLoading() {
   return (
     <main
       aria-label="Loading summary"
-      className="mx-auto min-h-screen w-full max-w-5xl px-6 py-8"
+      className="mx-auto min-h-screen w-full max-w-6xl px-6 py-6"
     >
-      <nav className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+      <nav className="rounded-2xl border border-slate-200 bg-white/85 px-5 py-4 shadow-sm backdrop-blur sm:flex sm:items-center sm:justify-between">
         <div className="animate-pulse space-y-2">
           <SkeletonBlock className="h-4 w-44" />
           <SkeletonBlock className="h-8 w-52" />
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="mt-4 flex flex-wrap gap-3 sm:mt-0">
+          <SkeletonBlock className="h-10 w-24" />
           <SkeletonBlock className="h-10 w-28" />
           <SkeletonBlock className="h-10 w-24" />
         </div>
       </nav>
 
-      <section className="space-y-6 py-8">
-        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="space-y-6 py-6">
+        <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
           <div className="animate-pulse space-y-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="space-y-2">
@@ -41,7 +42,7 @@ export default function SummaryLoading() {
           </div>
         </div>
 
-        <section className="rounded-lg border border-teal-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-sky-200 bg-white p-5 shadow-sm">
           <div className="animate-pulse space-y-3">
             <SkeletonBlock className="h-4 w-28" />
             <SkeletonBlock className="h-5 w-60 max-w-full" />
@@ -50,7 +51,7 @@ export default function SummaryLoading() {
           </div>
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="animate-pulse space-y-4">
             <SkeletonBlock className="h-5 w-48" />
             {[0, 1, 2].map((item) => (
@@ -69,7 +70,7 @@ export default function SummaryLoading() {
           {[0, 1, 2].map((section) => (
             <section
               key={section}
-              className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
             >
               <div className="animate-pulse space-y-4">
                 <SkeletonBlock className="h-5 w-36" />

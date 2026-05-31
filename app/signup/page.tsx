@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signup } from "@/app/actions/auth";
 import { PendingSubmitButton } from "@/components/auth/pending-submit-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type SignupSearchParams = {
   error?: string;
@@ -14,13 +15,25 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   const params = searchParams ? await searchParams : {};
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12">
-      <Link href="/" className="mb-8 text-lg font-semibold text-slate-950">
-        ThreeSource
-      </Link>
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-10">
+      <div className="mb-8 flex items-center justify-between">
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-950"
+        >
+          <span className="h-2.5 w-2.5 rounded-full bg-sky-500" />
+          <span>ThreeSource</span>
+        </Link>
+        <ThemeToggle />
+      </div>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-slate-950">Create account</h1>
+      <section className="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm backdrop-blur">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
+          Start tracking
+        </p>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+          Create account
+        </h1>
         <p className="mt-2 text-sm text-slate-600">
           Sign up to manage private tasks, timers, and daily progress.
         </p>
@@ -44,7 +57,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
               type="email"
               data-testid="signup-email"
               autoComplete="email"
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950 outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100"
+              className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
             />
           </label>
 
@@ -57,7 +70,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
               data-testid="signup-password"
               minLength={8}
               autoComplete="new-password"
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950 outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100"
+              className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
             />
           </label>
 
@@ -65,13 +78,13 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
             idleText="Sign up"
             pendingText="Creating account..."
             testId="signup-submit"
-            className="w-full rounded-md bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="w-full rounded-md bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
           />
         </form>
 
         <p className="mt-5 text-sm text-slate-600">
           Already have an account?{" "}
-          <Link href="/login" className="font-semibold text-teal-700">
+          <Link href="/login" className="font-semibold text-sky-700">
             Log in
           </Link>
         </p>

@@ -8,6 +8,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
+import { Toast, type ToastState } from "@/components/toast";
 import { formatDateTime, formatDuration } from "@/lib/format";
 import type {
   Task,
@@ -207,8 +208,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [timerTaskId, setTimerTaskId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
   const [expandedLogTaskIds, setExpandedLogTaskIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -225,18 +225,23 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
   });
 
   function clearFeedback() {
-    setError(null);
-    setNotice(null);
+    setToast(null);
   }
 
   function showSuccess(message: string) {
-    setError(null);
-    setNotice(message);
+    setToast({
+      id: Date.now(),
+      kind: "success",
+      message,
+    });
   }
 
   function showError(message: string) {
-    setNotice(null);
-    setError(message);
+    setToast({
+      id: Date.now(),
+      kind: "error",
+      message,
+    });
   }
 
   const activeLog = useMemo(
@@ -325,7 +330,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
   }, [timeLogs, now, taskStatusById]);
 
   async function loadDashboardData() {
-    setError(null);
+    setToast(null);
 
     try {
       const [tasksResponse, logsResponse] = await Promise.all([
@@ -676,8 +681,8 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
   }
 
   return (
-    <section data-testid="task-manager" className="space-y-8 py-8">
-      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <section data-testid="task-manager" className="space-y-8 py-6">
+      <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
         <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500">
@@ -726,7 +731,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
               }
               maxLength={500}
               placeholder="Follow up with designer"
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950 outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100"
+              className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
             />
           </label>
 
@@ -746,7 +751,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                 }
                 maxLength={160}
                 placeholder="Follow up with UI Designer"
-                className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950 outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100"
+                className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
               />
             </label>
 
@@ -765,7 +770,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                 }
                 maxLength={2000}
                 placeholder="Confirm wireframe delivery status"
-                className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950 outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100"
+                className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
               />
             </label>
           </div>
@@ -775,7 +780,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
               type="submit"
               disabled={isCreating}
               data-testid="task-create-submit"
-              className="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+              className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
             >
               {isCreating ? "Creating..." : "Create task"}
             </button>
@@ -783,25 +788,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
         </form>
       </div>
 
-      {error ? (
-        <p
-          role="alert"
-          data-testid="feedback-error"
-          className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-        >
-          {error}
-        </p>
-      ) : null}
-
-      {notice ? (
-        <p
-          role="status"
-          data-testid="feedback-success"
-          className="rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800"
-        >
-          {notice}
-        </p>
-      ) : null}
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
 
       <div className="space-y-4">
         {isLoading ? (
@@ -839,7 +826,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
             <article
               key={task.id}
               data-testid="task-card"
-              className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
             >
               {isEditing ? (
                 <form
@@ -862,7 +849,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                           }))
                         }
                         maxLength={160}
-                        className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-950 outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100"
+                        className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                       />
                     </label>
 
@@ -879,7 +866,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                             status: event.target.value as TaskStatus,
                           }))
                         }
-                        className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100"
+                        className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                       >
                         {Object.entries(statusLabels).map(([value, label]) => (
                           <option key={value} value={value}>
@@ -905,7 +892,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                       }
                       maxLength={2000}
                       rows={3}
-                      className="mt-2 w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-slate-950 outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100"
+                      className="mt-2 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                     />
                   </label>
 
@@ -921,7 +908,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                       type="submit"
                       disabled={isBusy}
                       data-testid="task-edit-save"
-                      className="rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                      className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
                     >
                       {updatingId === task.id ? "Saving..." : "Save changes"}
                     </button>
@@ -944,7 +931,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                           {statusLabels[task.status]}
                         </span>
                         {taskActiveLog ? (
-                          <span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800">
+                          <span className="rounded-full bg-sky-50 px-2.5 py-1 font-mono text-xs font-semibold tabular-nums text-sky-800">
                             Tracking {formatDuration(activeSeconds)}
                           </span>
                         ) : null}
@@ -965,7 +952,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                       disabled={isBusy}
                       data-testid="task-status-select"
                       onChange={(event) => handleStatusChange(task, event)}
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none transition focus:border-teal-700 focus:ring-2 focus:ring-teal-100 disabled:cursor-not-allowed disabled:bg-slate-100 sm:w-44"
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 sm:w-44"
                     >
                       {Object.entries(statusLabels).map(([value, label]) => (
                         <option key={value} value={value}>
@@ -980,13 +967,13 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                       <p className="font-medium text-slate-500">
                         Completed time
                       </p>
-                      <p className="mt-1 font-semibold text-slate-950">
+                      <p className="mt-1 font-mono font-semibold tabular-nums text-slate-950">
                         {formatDuration(completedSeconds)}
                       </p>
                     </div>
                     <div data-testid="task-current-run">
                       <p className="font-medium text-slate-500">Current run</p>
-                      <p className="mt-1 font-semibold text-slate-950">
+                      <p className="mt-1 font-mono font-semibold tabular-nums text-slate-950">
                         {taskActiveLog ? formatDuration(activeSeconds) : "-"}
                       </p>
                     </div>
@@ -1010,7 +997,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                           onClick={() => handleStopTimer(task)}
                           disabled={isBusy}
                           data-testid="task-stop-button"
-                          className="rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                          className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
                         >
                           {timerTaskId === task.id ? "Stopping..." : "Stop"}
                         </button>
@@ -1025,7 +1012,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                               ? "Stop the active timer before starting another task."
                               : undefined
                           }
-                          className="rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                          className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
                         >
                           {timerTaskId === task.id ? "Starting..." : "Start"}
                         </button>
@@ -1059,7 +1046,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
 
       <section
         data-testid="time-logs-section"
-        className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+        className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur"
       >
         <div className="flex flex-col gap-1 border-b border-slate-200 pb-4">
           <h2 className="text-xl font-semibold text-slate-950">Time logs</h2>
@@ -1109,7 +1096,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                           </span>
                         ) : null}
                         {group.hasActiveLog ? (
-                          <span className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-800">
+                          <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800">
                             Active
                           </span>
                         ) : null}
@@ -1122,7 +1109,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                      <span className="text-sm font-semibold text-slate-950">
+                      <span className="font-mono text-sm font-semibold tabular-nums text-slate-950">
                         {formatDuration(group.totalSeconds)}
                       </span>
                       <button
@@ -1173,7 +1160,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                               <p className="font-medium text-slate-500">
                                 Duration
                               </p>
-                              <p className="mt-1 font-semibold text-slate-950">
+                              <p className="mt-1 font-mono font-semibold tabular-nums text-slate-950">
                                 {formatDuration(durationSeconds)}
                               </p>
                             </div>

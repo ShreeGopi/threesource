@@ -86,7 +86,7 @@ function SummarySectionsSkeleton() {
       aria-label="Loading summary sections"
       className="space-y-6"
     >
-      <section className="rounded-lg border border-teal-200 bg-white p-5 shadow-sm">
+      <section className="rounded-2xl border border-sky-200 bg-white p-5 shadow-sm">
         <div className="animate-pulse space-y-3">
           <SkeletonBlock className="h-4 w-28" />
           <SkeletonBlock className="h-5 w-60 max-w-full" />
@@ -95,7 +95,7 @@ function SummarySectionsSkeleton() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="animate-pulse space-y-4">
           <SkeletonBlock className="h-5 w-48" />
           {[0, 1, 2].map((item) => (
@@ -114,7 +114,7 @@ function SummarySectionsSkeleton() {
         {[0, 1, 2].map((section) => (
           <section
             key={section}
-            className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
           >
             <div className="animate-pulse space-y-4">
               <SkeletonBlock className="h-5 w-36" />
@@ -172,8 +172,8 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
   }, []);
 
   return (
-    <section data-testid="daily-summary" className="space-y-6 py-8">
-      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <section data-testid="daily-summary" className="space-y-6 py-6">
+      <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500">
@@ -192,7 +192,7 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
             type="button"
             onClick={() => void loadSummary()}
             disabled={isLoading}
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
           >
             {isLoading ? "Refreshing..." : "Refresh"}
           </button>
@@ -208,34 +208,34 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
 
         {summary ? (
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-medium text-slate-500">
                 Total tracked
               </p>
               <p
                 data-testid="summary-total-tracked"
-                className="mt-2 text-3xl font-bold text-slate-950"
+                className="mt-2 font-mono text-3xl font-semibold tabular-nums text-slate-950"
               >
                 {formatDuration(summary.total_tracked_seconds)}
               </p>
             </div>
-            <div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-medium text-slate-500">
                 Worked tasks
               </p>
-              <p className="mt-2 text-3xl font-bold text-slate-950">
+              <p className="mt-2 text-3xl font-semibold text-slate-950">
                 {summary.tasks_worked_on.length}
               </p>
             </div>
-            <div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-medium text-slate-500">Completed</p>
-              <p className="mt-2 text-3xl font-bold text-slate-950">
+              <p className="mt-2 text-3xl font-semibold text-slate-950">
                 {summary.completed_tasks.length}
               </p>
             </div>
-            <div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-medium text-slate-500">Open</p>
-              <p className="mt-2 text-3xl font-bold text-slate-950">
+              <p className="mt-2 text-3xl font-semibold text-slate-950">
                 {summary.pending_tasks.length +
                   summary.in_progress_tasks.length}
               </p>
@@ -251,9 +251,9 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
           {summary.active_log ? (
             <section
               data-testid="summary-active-log"
-              className="rounded-lg border border-teal-200 bg-white p-5 shadow-sm"
+              className="rounded-2xl border border-sky-200 bg-white p-5 shadow-sm"
             >
-              <p className="text-sm font-semibold uppercase text-teal-700">
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">
                 Active timer
               </p>
               <h3 className="mt-2 min-w-0 break-words text-lg font-semibold text-slate-950">
@@ -262,7 +262,7 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
               <p className="mt-2 text-sm text-slate-600">
                 Started {formatDateTime(summary.active_log.started_at)}
               </p>
-              <p className="mt-3 text-2xl font-bold text-slate-950">
+              <p className="mt-3 font-mono text-2xl font-semibold tabular-nums text-slate-950">
                 {formatDuration(summary.active_log.elapsed_seconds)}
               </p>
             </section>
@@ -270,7 +270,7 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
 
           <section
             data-testid="summary-worked"
-            className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
           >
             <h3 className="text-lg font-semibold text-slate-950">
               Tasks worked on today
@@ -289,7 +289,7 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
                     <span className="min-w-0 break-words font-medium text-slate-950">
                       {task.title}
                     </span>
-                    <span className="shrink-0 text-sm font-semibold text-slate-700">
+                    <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-slate-700">
                       {formatDuration(task.time_tracked_seconds)}
                     </span>
                   </li>
@@ -301,7 +301,7 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
           <div className="grid gap-6 lg:grid-cols-3">
             <section
               data-testid="summary-completed"
-              className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
             >
               <h3 className="text-lg font-semibold text-slate-950">
                 Completed today
@@ -316,7 +316,7 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
 
             <section
               data-testid="summary-pending"
-              className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
             >
               <h3 className="text-lg font-semibold text-slate-950">Pending</h3>
               <div className="mt-4">
@@ -329,7 +329,7 @@ export function DailySummaryPanel({ userEmail }: { userEmail: string | null }) {
 
             <section
               data-testid="summary-in-progress"
-              className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
             >
               <h3 className="text-lg font-semibold text-slate-950">
                 In progress
