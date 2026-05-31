@@ -16,6 +16,14 @@ Built as a full-stack assignment covering auth, REST APIs, real-time UI, and dai
 Email:    threesource@gmail.com
 Password: threesource@gmail.com
 ```
+
+### Environment variables
+
+ For security, real `.env.local` values are not committed to the repository
+```
+I have shared the required environment values separately by email from:  
+`gopipurohitkpg01@gmail.com`
+```
 ---
 
 ## What it does
