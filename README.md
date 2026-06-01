@@ -79,8 +79,8 @@ Open `.env.local` and fill in your Supabase project values:
 ```
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-GEMINI_API_KEY=optional_server_only_gemini_key
-GEMINI_TASK_SUGGEST_MODEL=optional_model_override
+GEMINI_API_KEY= your_gemini_Api_Key
+GEMINI_TASK_SUGGEST_MODEL=gemini-2.5-flash-lite
 ```
 
 You can find the Supabase values in your Supabase project under Settings → API. `GEMINI_API_KEY` is optional and server-only; do not prefix it with `NEXT_PUBLIC`. If it is missing or Gemini is unavailable, task suggestions use the local deterministic fallback. The default Gemini model is `gemini-2.5-flash-lite`; set `GEMINI_TASK_SUGGEST_MODEL` only if you want to override it.
