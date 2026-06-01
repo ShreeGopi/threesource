@@ -79,7 +79,7 @@ Open `.env.local` and fill in your Supabase project values:
 ```
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-GEMINI_API_KEY= AQ.Ab8RN6KCX3JN9hALPPg6ptUNJZFvQSr2fEU--rQVx0T5kju2bg 
+GEMINI_API_KEY= your_gemini_Api_Key
 GEMINI_TASK_SUGGEST_MODEL=gemini-2.5-flash-lite
 ```
 
