@@ -16,6 +16,10 @@ type TaskApiResponse = {
   task: TaskApiRow;
 };
 
+type SuggestionRequest = {
+  input?: string;
+};
+
 type TasksApiResponse = {
   tasks: TaskApiRow[];
 };
@@ -256,6 +260,89 @@ test.describe("ThreeSource smoke flow", () => {
   await expect(page.getByRole("status")).toContainText(
     "You have been signed out.",
   );
+});
+
+  test("suggestion flow populates fields and waits for manual task creation", async ({
+    page,
+  }) => {
+  await login(page);
+  await cleanupE2eTasks(page);
+
+  const originalInput = uniqueTitle("suggest input");
+  const suggestedTitle = `${runPrefix} suggested task`;
+  const suggestedDescription =
+    "Confirm designer progress and expected delivery timeline.";
+
+  await page.route("**/api/tasks/suggest", async (route) => {
+    const request = route.request();
+    const payload = request.postDataJSON() as SuggestionRequest;
+
+    expect(request.method()).toBe("POST");
+    expect(payload.input).toBe(originalInput.trim());
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        title: suggestedTitle,
+        description: suggestedDescription,
+        source: "gemini",
+      }),
+    });
+  });
+
+  await expect(page.getByTestId("ai-suggest-button")).toHaveText("Suggest");
+  await page.getByTestId("task-original-input").fill(originalInput);
+  await page.getByTestId("ai-suggest-button").click();
+  await expect(page.getByTestId("task-title-input")).toHaveValue(
+    suggestedTitle,
+  );
+  await expect(page.getByTestId("task-description-input")).toHaveValue(
+    suggestedDescription,
+  );
+  await expectSuccessFeedback(page, /Suggestion added/i);
+  await expect(taskCard(page, suggestedTitle)).toHaveCount(0);
+
+  const [response] = await Promise.all([
+    page.waitForResponse((res) =>
+      isCreateTaskResponse(res.url(), res.request().method()),
+    ),
+    page.getByTestId("task-create-submit").click(),
+  ]);
+
+  expect(response.status()).toBe(201);
+  await expect(taskCard(page, suggestedTitle)).toBeVisible();
+  await maybeExpectSuccessFeedback(page, /Task created/i);
+});
+
+  test("suggestion fallback works without a Gemini key", async ({ page }) => {
+  test.skip(
+    Boolean(process.env.GEMINI_API_KEY),
+    "GEMINI_API_KEY is configured, so the live route may use Gemini.",
+  );
+
+  await login(page);
+  await cleanupE2eTasks(page);
+
+  await page.getByTestId("task-original-input").fill("drink water");
+  await page.getByTestId("ai-suggest-button").click();
+  await expect(page.getByTestId("task-title-input")).toHaveValue("Drink Water");
+  await expect(page.getByTestId("task-description-input")).toHaveValue(
+    "Take a short hydration break.",
+  );
+  await expectSuccessFeedback(page, /offline fallback/i);
+
+  const [response] = await Promise.all([
+    page.waitForResponse((res) =>
+      isCreateTaskResponse(res.url(), res.request().method()),
+    ),
+    page.getByTestId("task-create-submit").click(),
+  ]);
+
+  expect(response.status()).toBe(201);
+  const payload = (await response.json()) as TaskApiResponse;
+  await expect(taskCard(page, payload.task.title)).toBeVisible();
+  await page.request.delete(`/api/tasks/${payload.task.id}`);
 });
 
   test("task CRUD creates, edits, updates status, and deletes a task", async ({

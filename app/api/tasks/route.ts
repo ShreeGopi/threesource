@@ -17,6 +17,7 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) {
+    console.error("GET /api/tasks failed", error);
     return apiError(500, "Unable to load tasks.");
   }
 
@@ -60,6 +61,7 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
+    console.error("POST /api/tasks failed", error);
     return apiError(500, "Unable to create task.");
   }
 

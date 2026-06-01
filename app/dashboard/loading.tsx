@@ -44,7 +44,7 @@ export default function DashboardLoading() {
       aria-label="Loading dashboard"
       className="mx-auto min-h-screen w-full max-w-6xl px-6 py-6"
     >
-      <nav className="rounded-2xl border border-slate-200 bg-white/85 px-5 py-4 shadow-sm backdrop-blur sm:flex sm:items-center sm:justify-between">
+ <nav className="rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex sm:items-center sm:justify-between">
         <div className="animate-pulse space-y-2">
           <SkeletonBlock className="h-4 w-40" />
           <SkeletonBlock className="h-8 w-72 max-w-full" />

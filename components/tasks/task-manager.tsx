@@ -44,6 +44,15 @@ type TimeLogResponse = {
   time_log: TimeLogWithTask;
 };
 
+type TaskSuggestionResponse = {
+  title: string;
+  description: string;
+  source: "gemini" | "fallback";
+};
+
+const taskSuggestionFailureMessage =
+  "Unable to generate suggestion right now. You can enter details manually.";
+
 type ApiErrorResponse = {
   error?: string;
   details?: Array<{
@@ -204,6 +213,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
   const [now, setNow] = useState(() => Date.now());
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [timerTaskId, setTimerTaskId] = useState<string | null>(null);
@@ -218,6 +228,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
     title: "",
     description: "",
   });
+  const createInputRef = useRef(createForm.originalInput);
   const [editForm, setEditForm] = useState<EditForm>({
     title: "",
     description: "",
@@ -253,6 +264,9 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
     () => tasks.filter((task) => task.status === "completed").length,
     [tasks],
   );
+
+  const canSuggestTask =
+    createForm.originalInput.trim().length >= 3 && !isCreating && !isSuggesting;
 
   const totalSecondsByTask = useMemo(() => {
     const totals = new Map<string, number>();
@@ -376,6 +390,10 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
     return () => window.clearInterval(intervalId);
   }, []);
 
+  useEffect(() => {
+    createInputRef.current = createForm.originalInput;
+  }, [createForm.originalInput]);
+
   function toggleLogGroup(taskId: string) {
     setExpandedLogTaskIds((currentIds) => {
       const nextIds = new Set(currentIds);
@@ -388,6 +406,57 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
 
       return nextIds;
     });
+  }
+
+
+  async function handleSuggestTask() {
+    clearFeedback();
+
+    const naturalInput = createForm.originalInput.trim();
+
+    if (naturalInput.length < 3) {
+      showError("Enter at least 3 characters before asking for a suggestion.");
+      return;
+    }
+
+    setIsSuggesting(true);
+
+    try {
+      const response = await fetch("/api/tasks/suggest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          input: naturalInput,
+        }),
+      });
+      const suggestion = await readApiResponse<TaskSuggestionResponse>(response);
+
+      if (createInputRef.current.trim() !== naturalInput) {
+        return;
+      }
+
+      setCreateForm((currentForm) => ({
+        ...currentForm,
+        title: suggestion.title,
+        description: suggestion.description,
+      }));
+      showSuccess(
+        suggestion.source === "fallback"
+          ? "Suggestion added using offline fallback."
+          : "Suggestion added. You can edit it before creating the task.",
+      );
+    } catch (caughtError) {
+      showError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : taskSuggestionFailureMessage,
+      );
+    } finally {
+      setIsSuggesting(false);
+    }
   }
 
   async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
@@ -681,31 +750,34 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
   }
 
   return (
-    <section data-testid="task-manager" className="space-y-8 py-6">
-      <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
-        <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+    <section data-testid="task-manager" className="space-y-8 py-8">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500">
               {userEmail ?? "Signed in"}
             </p>
             <h2 className="mt-1 text-xl font-semibold text-slate-950">
-              Tasks
+              Quick capture
             </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Start with plain language. Add structure only when it helps.
+            </p>
           </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
-            <span>
+          <div className="grid grid-cols-3 gap-2 text-center text-sm text-slate-600 sm:min-w-64">
+            <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
               <span className="font-semibold text-slate-950">
                 {tasks.length}
               </span>{" "}
               total
             </span>
-            <span>
+            <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
               <span className="font-semibold text-slate-950">
                 {completedCount}
               </span>{" "}
               done
             </span>
-            <span>
+            <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
               <span className="font-semibold text-slate-950">
                 {tasks.length - completedCount}
               </span>{" "}
@@ -714,7 +786,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
           </div>
         </div>
 
-        <form onSubmit={handleCreateTask} className="mt-5 space-y-4">
+        <form onSubmit={handleCreateTask} className="mt-6 space-y-4">
           <label className="block">
             <span className="text-sm font-medium text-slate-800">
               Natural language task
@@ -731,11 +803,50 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
               }
               maxLength={500}
               placeholder="Follow up with designer"
-              className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+              className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
             />
           </label>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="flex flex-col gap-3 rounded-xl border border-sky-100 bg-sky-50/70 px-4 py-3 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-slate-950">
+                AI task suggestion
+              </h3>
+              <p className="mt-1 leading-6">
+                Generate a cleaner title and description from the task input.
+                Review both below before creating the task.
+              </p>
+            </div>
+            <button
+              type="button"
+              data-testid="ai-suggest-button"
+              disabled={!canSuggestTask}
+              onClick={handleSuggestTask}
+              className="inline-flex items-center justify-center rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700 shadow-sm transition hover:border-sky-300 hover:bg-sky-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+            >
+              {isSuggesting ? (
+                <span
+                  data-testid="ai-suggest-loading"
+                  className="inline-flex items-center gap-2"
+                >
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-sky-200 border-t-sky-700" />
+                  Generating...
+                </span>
+              ) : (
+                "Suggest"
+              )}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <span className="h-px flex-1 bg-slate-200" />
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Optional details
+            </span>
+            <span className="h-px flex-1 bg-slate-200" />
+          </div>
+
+          <div className="grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-2">
             <label className="block">
               <span className="text-sm font-medium text-slate-800">
                 Title override
@@ -780,7 +891,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
               type="submit"
               disabled={isCreating}
               data-testid="task-create-submit"
-              className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+              className="rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
             >
               {isCreating ? "Creating..." : "Create task"}
             </button>
@@ -796,12 +907,12 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
         ) : null}
 
         {!isLoading && tasks.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
             <h3 className="text-base font-semibold text-slate-950">
               No tasks yet
             </h3>
             <p className="mt-2 text-sm text-slate-600">
-              Create your first task above.
+              Create your first task above and start tracking focused work.
             </p>
           </div>
         ) : null}
@@ -826,7 +937,13 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
             <article
               key={task.id}
               data-testid="task-card"
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+              className={`rounded-xl border bg-white p-6 shadow-sm transition ${
+                taskActiveLog
+                  ? "border-sky-300 bg-sky-50/50"
+                  : task.status === "completed"
+                    ? "border-slate-200"
+                    : "border-slate-200"
+              }`}
             >
               {isEditing ? (
                 <form
@@ -849,7 +966,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                           }))
                         }
                         maxLength={160}
-                        className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                      className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                       />
                     </label>
 
@@ -866,7 +983,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                             status: event.target.value as TaskStatus,
                           }))
                         }
-                        className="mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                       >
                         {Object.entries(statusLabels).map(([value, label]) => (
                           <option key={value} value={value}>
@@ -892,7 +1009,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                       }
                       maxLength={2000}
                       rows={3}
-                      className="mt-2 w-full resize-y rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                      className="mt-2 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-950 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                     />
                   </label>
 
@@ -900,7 +1017,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                     <button
                       type="button"
                       onClick={() => setEditingId(null)}
-                      className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+                      className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
                     >
                       Cancel
                     </button>
@@ -908,7 +1025,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                       type="submit"
                       disabled={isBusy}
                       data-testid="task-edit-save"
-                      className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                      className="rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
                     >
                       {updatingId === task.id ? "Saving..." : "Save changes"}
                     </button>
@@ -931,7 +1048,8 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                           {statusLabels[task.status]}
                         </span>
                         {taskActiveLog ? (
-                          <span className="rounded-full bg-sky-50 px-2.5 py-1 font-mono text-xs font-semibold tabular-nums text-sky-800">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-2.5 py-1 font-mono text-xs font-semibold tabular-nums text-sky-800">
+                            <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
                             Tracking {formatDuration(activeSeconds)}
                           </span>
                         ) : null}
@@ -952,7 +1070,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                       disabled={isBusy}
                       data-testid="task-status-select"
                       onChange={(event) => handleStatusChange(task, event)}
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 sm:w-44"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 sm:w-44"
                     >
                       {Object.entries(statusLabels).map(([value, label]) => (
                         <option key={value} value={value}>
@@ -963,7 +1081,10 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                   </div>
 
                   <div className="grid gap-3 border-t border-slate-200 pt-4 text-sm sm:grid-cols-3">
-                    <div data-testid="task-completed-time">
+                    <div
+                      data-testid="task-completed-time"
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                    >
                       <p className="font-medium text-slate-500">
                         Completed time
                       </p>
@@ -971,13 +1092,20 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                         {formatDuration(completedSeconds)}
                       </p>
                     </div>
-                    <div data-testid="task-current-run">
+                    <div
+                      data-testid="task-current-run"
+                      className={`rounded-xl border p-4 ${
+                        taskActiveLog
+                          ? "border-sky-200 bg-sky-50"
+                          : "border-slate-200 bg-slate-50"
+                      }`}
+                    >
                       <p className="font-medium text-slate-500">Current run</p>
                       <p className="mt-1 font-mono font-semibold tabular-nums text-slate-950">
                         {taskActiveLog ? formatDuration(activeSeconds) : "-"}
                       </p>
                     </div>
-                    <div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                       <p className="font-medium text-slate-500">Updated</p>
                       <p className="mt-1 font-semibold text-slate-950">
                         {formatDateTime(task.updated_at)}
@@ -990,14 +1118,19 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                       Created {formatDateTime(task.created_at)}
                     </p>
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      {isAnotherTaskRunning ? (
+                        <span className="text-xs font-medium text-slate-500">
+                          Stop the active timer before starting another.
+                        </span>
+                      ) : null}
                       {taskActiveLog ? (
                         <button
                           type="button"
                           onClick={() => handleStopTimer(task)}
                           disabled={isBusy}
                           data-testid="task-stop-button"
-                          className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                          className="rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
                         >
                           {timerTaskId === task.id ? "Stopping..." : "Stop"}
                         </button>
@@ -1012,7 +1145,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                               ? "Stop the active timer before starting another task."
                               : undefined
                           }
-                          className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                          className="rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400"
                         >
                           {timerTaskId === task.id ? "Starting..." : "Start"}
                         </button>
@@ -1022,7 +1155,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                         onClick={() => startEditing(task)}
                         disabled={isBusy}
                         data-testid="task-edit-button"
-                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                        className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
                       >
                         Edit
                       </button>
@@ -1031,7 +1164,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                         onClick={() => handleDeleteTask(task)}
                         disabled={isBusy}
                         data-testid="task-delete-button"
-                        className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                        className="rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-400"
                       >
                         {deletingId === task.id ? "Deleting..." : "Delete"}
                       </button>
@@ -1046,7 +1179,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
 
       <section
         data-testid="time-logs-section"
-        className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur"
+        className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       >
         <div className="flex flex-col gap-1 border-b border-slate-200 pb-4">
           <h2 className="text-xl font-semibold text-slate-950">Time logs</h2>
@@ -1065,13 +1198,13 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
               No time logs yet
             </h3>
             <p className="mt-2 text-sm text-slate-600">
-              Start and stop a task timer to create your first log.
+              Start a timer to record your first work session.
             </p>
           </div>
         ) : null}
 
         {timeLogGroups.length > 0 ? (
-          <div className="mt-4 divide-y divide-slate-100">
+          <div className="mt-4 space-y-3">
             {timeLogGroups.map((group) => {
               const isExpanded = expandedLogTaskIds.has(group.taskId);
 
@@ -1079,10 +1212,10 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                 <div
                   key={group.taskId}
                   data-testid="time-log-group"
-                  className="py-4 first:pt-0 last:pb-0"
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="min-w-0 break-words text-base font-semibold text-slate-950">
                           {group.taskTitle}
@@ -1096,7 +1229,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                           </span>
                         ) : null}
                         {group.hasActiveLog ? (
-                          <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800">
+                          <span className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-800">
                             Active
                           </span>
                         ) : null}
@@ -1109,7 +1242,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                      <span className="font-mono text-sm font-semibold tabular-nums text-slate-950">
+                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 font-mono text-sm font-semibold tabular-nums text-slate-950">
                         {formatDuration(group.totalSeconds)}
                       </span>
                       <button
@@ -1117,7 +1250,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                         onClick={() => toggleLogGroup(group.taskId)}
                         aria-expanded={isExpanded}
                         data-testid="time-log-toggle"
-                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-100"
                       >
                         {isExpanded ? "Hide sessions" : "Show sessions"}
                       </button>
@@ -1136,7 +1269,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
                           <div
                             key={log.id}
                             data-testid="time-log-session"
-                            className="grid gap-2 text-sm sm:grid-cols-[1fr_1fr_auto]"
+                            className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm sm:grid-cols-[1fr_1fr_auto]"
                           >
                             <div className="min-w-0">
                               <p className="font-medium text-slate-500">

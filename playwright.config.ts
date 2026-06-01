@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+const e2ePort = process.env.E2E_PORT ?? "3002";
+const baseURL =
+  process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${e2ePort}`;
 const hasE2eCredentials = Boolean(
   process.env.E2E_TEST_EMAIL && process.env.E2E_TEST_PASSWORD,
 );
@@ -28,7 +30,7 @@ export default defineConfig({
   ],
   webServer: shouldStartLocalServer
     ? {
-        command: "npm run dev -- --hostname localhost --port 3000",
+        command: `npm run dev -- --hostname localhost --port ${e2ePort}`,
         url: baseURL,
         reuseExistingServer: true,
         timeout: 120_000,

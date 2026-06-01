@@ -47,4 +47,22 @@ export const UpdateTaskSchema = z
     message: "At least one task field is required.",
   });
 
+
+export const SuggestTaskSchema = z
+  .object({
+    input: z
+      .string()
+      .trim()
+      .min(3, "Enter at least 3 characters before asking for a suggestion.")
+      .max(500, "Task input must be 500 characters or fewer."),
+  })
+  .strict();
+
+export const TaskSuggestionSchema = z
+  .object({
+    title: z.string().trim().min(1).max(80),
+    description: z.string().trim().min(1).max(200),
+  })
+  .strict();
+
 export const TaskIdSchema = z.string().uuid();

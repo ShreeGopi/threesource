@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
 
   if (error) {
+    console.error("GET /api/time-logs failed", error);
     return apiError(500, "Unable to load time logs.");
   }
 

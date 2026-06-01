@@ -22,7 +22,7 @@ Password: threesource@gmail.com
 ## What it does
 
 **Tasks**
-Create a task by typing what you need to do in plain language. Give it a clearer title and description if you want, or just leave it as-is. Tasks have three states: Pending, In Progress, and Completed. You can edit, update, or delete them at any time.
+Create a task by typing what you need to do in plain language. You can optionally click Suggest to fill a clearer title and description, then review or edit before creating the task yourself. Tasks have three states: Pending, In Progress, and Completed. You can edit, update, or delete them at any time.
 
 **Timers**
 Each task has a Start and Stop button. Hit Start and a live timer begins ticking. Hit Stop and that session gets saved as a time log. Only one task can run at a time — this keeps your tracked time honest. If a task is Pending when you start the timer, it automatically moves to In Progress.
@@ -72,9 +72,11 @@ Open `.env.local` and fill in your Supabase project values:
 ```
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+GEMINI_API_KEY=optional_server_only_gemini_key
+GEMINI_TASK_SUGGEST_MODEL=optional_model_override
 ```
 
-You can find both in your Supabase project under Settings → API.
+You can find the Supabase values in your Supabase project under Settings → API. `GEMINI_API_KEY` is optional and server-only; do not prefix it with `NEXT_PUBLIC`. If it is missing or Gemini is unavailable, task suggestions use the local deterministic fallback. The default Gemini model is `gemini-2.5-flash-lite`; set `GEMINI_TASK_SUGGEST_MODEL` only if you want to override it.
 
 **3. Set up the database**
 
@@ -113,6 +115,7 @@ Every route requires an authenticated Supabase session. The server always reads 
 |---|---|---|
 | GET | `/api/tasks` | List all your tasks |
 | POST | `/api/tasks` | Create a task |
+| POST | `/api/tasks/suggest` | Suggest a title and description from natural input |
 | GET | `/api/tasks/[id]` | Get one task |
 | PATCH | `/api/tasks/[id]` | Edit a task |
 | DELETE | `/api/tasks/[id]` | Delete a task |
@@ -147,6 +150,9 @@ Two layers protect every piece of data:
 ---
 
 ## Design decisions worth knowing
+
+**AI suggestions are assist-only**
+The Suggest button can populate the title and description fields, but it never creates a task. The user always reviews the suggestion and clicks Create task manually. Suggestions use Gemini Flash Lite when `GEMINI_API_KEY` is configured; otherwise the app falls back to a deterministic local suggestion generator.
 
 **One active timer per user**
 You can only run one task timer at a time. This is intentional — it prevents accidentally double-counting time and keeps the tracked data accurate. The Start button on all other tasks is disabled while one is running. This rule is also enforced at the database level with a partial unique index.
@@ -199,6 +205,7 @@ npx playwright install chromium
 - Logged-out protected routes redirect to login with a message
 - Invalid credentials show the right error
 - Full auth flow: login, dashboard loads, logout
+- AI suggestion flow: Suggest fills title/description, fallback works without Gemini, task is still created manually
 - Task CRUD: create, edit, update status, delete
 - Timer flow: start, live update, block second timer, stop, log appears
 - Completing a task with an active timer stops the timer first
@@ -216,6 +223,8 @@ The app is deployed on Vercel.
 3. Add environment variables in Vercel project settings:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `GEMINI_API_KEY` (optional, server-only)
+   - `GEMINI_TASK_SUGGEST_MODEL` (optional)
 4. In Supabase Auth settings, update Site URL and redirect URLs to your Vercel domain
 5. Make sure `.env.local` is not committed (it is in `.gitignore` by default)
 
@@ -225,7 +234,6 @@ The app is deployed on Vercel.
 
 These were intentionally left out because they are optional or bonus scope and the core app needed to be solid first:
 
-- AI task title/description generation
 - Productivity charts
 - Weekly summaries
 - Reminders or notifications
@@ -242,6 +250,7 @@ app/
   actions/auth.ts        # Server actions for login, signup, logout
   api/
     tasks/               # Task CRUD route handlers
+    tasks/suggest/       # Gemini/fallback task suggestion route
     time-logs/           # Time log list route
     summary/today/       # Daily summary route
   dashboard/             # Protected task manager page
@@ -261,6 +270,9 @@ lib/
   validations/           # Zod schemas for tasks, time logs, summary, auth
   format.ts              # formatDuration and formatDateTime helpers
   summary.ts             # Day boundary and overlap calculation helpers
+
+src/
+  lib/ai/                # Gemini provider and deterministic task suggestion fallback
 
 supabase/
   migrations/            # SQL migration: schema, RLS, indexes
