@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 
+export const dynamic = "force-static";
+
 export default function HomePage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-6">

@@ -265,6 +265,50 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
     [tasks],
   );
 
+  const openCount = tasks.length - completedCount;
+
+  const activeTask = useMemo(
+    () =>
+      activeLog
+        ? tasks.find((task) => task.id === activeLog.task_id) ?? null
+        : null,
+    [activeLog, tasks],
+  );
+
+  const focusTasks = useMemo(() => {
+    const activeTaskId = activeLog?.task_id;
+
+    return [...tasks]
+      .sort((firstTask, secondTask) => {
+        if (firstTask.id === activeTaskId) {
+          return -1;
+        }
+
+        if (secondTask.id === activeTaskId) {
+          return 1;
+        }
+
+        return (
+          new Date(secondTask.updated_at).getTime() -
+          new Date(firstTask.updated_at).getTime()
+        );
+      })
+      .slice(0, 3);
+  }, [activeLog?.task_id, tasks]);
+
+  const completedTrackedSeconds = useMemo(
+    () =>
+      timeLogs.reduce(
+        (totalSeconds, log) =>
+          totalSeconds +
+          (log.ended_at && log.duration_seconds !== null
+            ? log.duration_seconds
+            : 0),
+        0,
+      ),
+    [timeLogs],
+  );
+
   const canSuggestTask =
     createForm.originalInput.trim().length >= 3 && !isCreating && !isSuggesting;
 
@@ -749,13 +793,125 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
     await stopTimerForTask(task);
   }
 
+  const activeFocusSeconds = activeLog
+    ? getElapsedSeconds(activeLog.started_at, now)
+    : 0;
+  const totalTrackedSeconds = completedTrackedSeconds + activeFocusSeconds;
+
   return (
     <section data-testid="task-manager" className="space-y-8 py-8">
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700">
+                Active focus
+              </p>
+              <h2 className="mt-2 truncate text-2xl font-semibold tracking-tight text-slate-950">
+                {activeTask?.title ??
+                  activeLog?.tasks?.title ??
+                  "No active timer"}
+              </h2>
+            </div>
+            <span
+              className={`w-fit rounded-full px-3 py-1.5 text-sm font-semibold ${
+                activeLog ? "bg-sky-100 text-sky-800" : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              {activeTask
+                ? statusLabels[activeTask.status]
+                : activeLog
+                  ? "In Progress"
+                  : "Idle"}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-500">Current</p>
+              <p className="mt-2 font-mono text-2xl font-semibold tabular-nums text-slate-950">
+                {activeLog ? formatDuration(activeFocusSeconds) : "-"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-500">Tracked</p>
+              <p className="mt-2 font-mono text-2xl font-semibold tabular-nums text-slate-950">
+                {formatDuration(totalTrackedSeconds)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-500">Done</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
+                {completedCount}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {focusTasks.length > 0 ? (
+              focusTasks.map((task) => (
+                <a
+                  key={task.id}
+                  href={`#task-${task.id}`}
+                  className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm transition hover:border-sky-200 hover:bg-sky-50"
+                >
+                  <span className="min-w-0 truncate font-semibold text-slate-900">
+                    {task.title}
+                  </span>
+                  <span className="shrink-0 text-slate-500">
+                    {task.id === activeLog?.task_id
+                      ? formatDuration(activeFocusSeconds)
+                      : statusLabels[task.status]}
+                  </span>
+                </a>
+              ))
+            ) : (
+              <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                Capture your first task below to start tracking work.
+              </p>
+            )}
+          </div>
+        </section>
+
+        <aside className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+          <a
+            href="#quick-capture"
+            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-sky-200 hover:bg-sky-50"
+          >
+            <p className="text-sm font-medium text-slate-500">Quick capture</p>
+            <p className="mt-2 text-sm font-semibold text-slate-950">
+              Create task
+            </p>
+          </a>
+          <a
+            href="#tasks-section"
+            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-sky-200 hover:bg-sky-50"
+          >
+            <p className="text-sm font-medium text-slate-500">Tasks</p>
+            <p className="mt-2 text-lg font-semibold text-slate-950">
+              {tasks.length} total / {openCount} open
+            </p>
+          </a>
+          <a
+            href="#time-logs-section"
+            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-sky-200 hover:bg-sky-50"
+          >
+            <p className="text-sm font-medium text-slate-500">Time logs</p>
+            <p className="mt-2 text-lg font-semibold text-slate-950">
+              {timeLogs.length} sessions
+            </p>
+          </a>
+        </aside>
+      </div>
+
+      <div
+        id="quick-capture"
+        className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+      >
+        <div className="border-b border-slate-200 pb-4">
           <div>
             <p className="text-sm font-medium text-slate-500">
-              {userEmail ?? "Signed in"}
+              {userEmail ?? "Signed in"} - Create task here
             </p>
             <h2 className="mt-1 text-xl font-semibold text-slate-950">
               Quick capture
@@ -763,26 +919,6 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
             <p className="mt-1 text-sm text-slate-600">
               Start with plain language. Add structure only when it helps.
             </p>
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-center text-sm text-slate-600 sm:min-w-64">
-            <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <span className="font-semibold text-slate-950">
-                {tasks.length}
-              </span>{" "}
-              total
-            </span>
-            <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <span className="font-semibold text-slate-950">
-                {completedCount}
-              </span>{" "}
-              done
-            </span>
-            <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <span className="font-semibold text-slate-950">
-                {tasks.length - completedCount}
-              </span>{" "}
-              open
-            </span>
           </div>
         </div>
 
@@ -901,7 +1037,19 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
 
       <Toast toast={toast} onDismiss={() => setToast(null)} />
 
-      <div className="space-y-4">
+      <section id="tasks-section" className="space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950">Tasks</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Start timers, update status, or edit details.
+            </p>
+          </div>
+          <p className="text-sm font-medium text-slate-500">
+            {tasks.length} total - {openCount} open
+          </p>
+        </div>
+
         {isLoading ? (
           <TaskCardsSkeleton />
         ) : null}
@@ -936,6 +1084,7 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
           return (
             <article
               key={task.id}
+              id={`task-${task.id}`}
               data-testid="task-card"
               className={`rounded-xl border bg-white p-6 shadow-sm transition ${
                 taskActiveLog
@@ -1175,16 +1324,17 @@ export function TaskManager({ userEmail }: { userEmail: string | null }) {
             </article>
           );
         })}
-      </div>
+      </section>
 
       <section
+        id="time-logs-section"
         data-testid="time-logs-section"
         className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
       >
         <div className="flex flex-col gap-1 border-b border-slate-200 pb-4">
           <h2 className="text-xl font-semibold text-slate-950">Time logs</h2>
           <p className="text-sm text-slate-600">
-            Stored work sessions for your tasks.
+            Saved work sessions grouped by task.
           </p>
         </div>
 
